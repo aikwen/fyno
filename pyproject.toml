@@ -5,24 +5,19 @@ build-backend = "hatchling.build"
 [project]
 name = "fyno"
 dynamic = ["version"]
-description = ''
+description = "A lightweight personal workbench."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = "MIT"
-keywords = []
+keywords = ["workbench", "tools", "markdown"]
 authors = [
   { name = "aikwen", email = "kwen.zou@outlook.com" },
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3",
   "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = []
 
@@ -38,6 +33,7 @@ path = "src/fyno/__about__.py"
 extra-dependencies = [
   "mypy>=1.0.0",
 ]
+
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:src/fyno tests}"
 
