@@ -19,7 +19,12 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: Implementation :: CPython",
 ]
-dependencies = []
+dependencies = [
+  "fastapi",
+  "pydantic",
+  "platformdirs",
+  "uvicorn[standard]",
+]
 
 [project.urls]
 Documentation = "https://github.com/aikwen/fyno#readme"
@@ -55,3 +60,6 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+
+[project.scripts]
+fyno = "fyno.main:main"
