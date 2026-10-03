@@ -1,6 +1,6 @@
 """Fyno application entrypoint。
 
-该模块负责创建 FastAPI 应用，并挂载各个功能模块提供的 Router。
+该模块负责创建 FastAPI 应用，并提供 Fyno 启动入口。
 
 职责范围：
 - 创建 FastAPI app。
@@ -9,27 +9,43 @@
 - 注册各功能模块 Router。
 - 托管前端静态资源。
 - 提供 SPA fallback。
-- 提供本地直接启动入口。
+- 检测 Fyno 是否已经运行。
+- 启动 Fyno 后台进程。
 
 该模块不负责：
 - Library 业务逻辑。
 - Workspace 生命周期实现。
 - Metadata 或文件系统操作。
+- Tray 生命周期。
+- Uvicorn 后台运行逻辑。
 """
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+import json
+import socket
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+import webbrowser
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .__about__ import __version__
 from .api import router as api_router
 from .library.api import router as library_router
 from .library.workspace import workspace as workspace_service
 
+
+HOST = "127.0.0.1"
+PORT = 9950
+
+FYNO_URL = f"http://{HOST}:{PORT}"
+HEALTH_URL = f"{FYNO_URL}/api/health"
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ASSETS_DIR = STATIC_DIR / "assets"
@@ -55,7 +71,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Fyno API",
-    version="0.1.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -77,6 +93,18 @@ app.include_router(
 )
 
 
+@app.get(
+    "/api/health",
+    include_in_schema=False,
+)
+def health() -> dict[str, str]:
+    """返回 Fyno 实例信息。"""
+    return {
+        "app": "fyno",
+        "version": __version__,
+    }
+
+
 # Vite 构建后的静态资源。
 if ASSETS_DIR.is_dir():
     app.mount(
@@ -86,8 +114,13 @@ if ASSETS_DIR.is_dir():
     )
 
 
-@app.get("/{full_path:path}", include_in_schema=False)
-def serve_frontend(full_path: str):
+@app.get(
+    "/{full_path:path}",
+    include_in_schema=False,
+)
+def serve_frontend(
+    full_path: str,
+):
     """返回 Fyno 前端页面。
 
     Vue Router 使用 history 模式，因此除 API 和静态资源外，
@@ -101,14 +134,83 @@ def serve_frontend(full_path: str):
     return FileResponse(INDEX_FILE)
 
 
-def main() -> None:
-    """启动 Fyno HTTP 服务。"""
-    uvicorn.run(
-        "fyno.main:app",
-        host="127.0.0.1",
-        port=9950,
-        reload=False,
+def _is_fyno_running() -> bool:
+    """判断当前 Fyno 实例是否已经运行。"""
+    try:
+        with urllib.request.urlopen(
+            HEALTH_URL,
+            timeout=0.5,
+        ) as response:
+            data = json.load(response)
+
+        return data.get("app") == "fyno"
+
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+        json.JSONDecodeError,
+    ):
+        return False
+
+
+def _is_port_used() -> bool:
+    """判断 Fyno HTTP 端口是否已经被占用。"""
+    with socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM,
+    ) as sock:
+        sock.settimeout(0.3)
+
+        return (
+            sock.connect_ex(
+                (HOST, PORT)
+            )
+            == 0
+        )
+
+def _start_background() -> None:
+    """启动独立的 Fyno 后台进程。"""
+    kwargs = {}
+
+    if sys.platform == "win32":
+        kwargs["creationflags"] = (
+            subprocess.CREATE_NO_WINDOW
+        )
+
+    subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "fyno.background",
+        ],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        close_fds=True,
+        **kwargs,
     )
+
+
+def main() -> None:
+    """启动或打开 Fyno。
+
+    已有 Fyno 实例运行时直接打开浏览器；
+    未运行时启动独立后台进程。
+    """
+    if _is_fyno_running():
+        webbrowser.open(
+            FYNO_URL
+        )
+        return
+
+    if _is_port_used():
+        raise RuntimeError(
+            f"Port {PORT} is already in use "
+            "by another application."
+        )
+
+    _start_background()
 
 
 if __name__ == "__main__":

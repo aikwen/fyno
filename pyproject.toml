@@ -14,16 +14,18 @@ authors = [
   { name = "aikwen", email = "kwen.zou@outlook.com" },
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
-  "fastapi",
-  "pydantic",
-  "platformdirs",
-  "uvicorn[standard]",
+  "fastapi>=0.141.1,<1.0.0",
+  "pydantic>=2.13.5,<3.0.0",
+  "platformdirs>=4.11.13,<5.0.0",
+  "uvicorn[standard]>=0.54.0,<1.0.0",
+  "pystray>=0.19.5,<1.0.0",
+  "pillow>=12.3.0,<13.0.0",
 ]
 
 [project.urls]
@@ -36,9 +38,6 @@ path = "src/fyno/__about__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fyno"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/fyno/static" = "fyno/static"
 
 [tool.hatch.envs.types]
 extra-dependencies = [
