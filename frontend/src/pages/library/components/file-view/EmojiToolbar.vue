@@ -141,7 +141,6 @@ const handlePanelClick = (event) => {
   >
     <template #overlay>
       <div
-        v-if="visible"
         class="emoji-panel"
         aria-label="Emoji picker"
         @click="handlePanelClick"

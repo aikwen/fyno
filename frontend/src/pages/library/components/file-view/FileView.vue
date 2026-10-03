@@ -170,6 +170,7 @@ const handleCatalogActive = (
     "
   >
     <FileToolbar
+      class="file-view-toolbar-enter"
       :collection-name="file.collectionName"
       :file-name="file.name"
       :loading="loading"
@@ -181,6 +182,7 @@ const handleCatalogActive = (
     <main
       ref="contentScrollRef"
       class="
+        file-view-body-enter
         relative
         min-h-0 min-w-0
         flex-1
@@ -190,32 +192,92 @@ const handleCatalogActive = (
         px-10 py-8
       "
     >
-      <div
-        v-if="loading"
-        class="space-y-4"
-        aria-label="Loading Markdown"
+      <Transition
+        name="file-content"
+        mode="out-in"
       >
-        <div class="skeleton h-3 w-full" />
-        <div class="skeleton h-3 w-4/5" />
-        <div class="skeleton h-3 w-[95%]" />
-        <div class="skeleton h-3 w-3/5" />
-        <div class="skeleton h-3 w-[88%]" />
-      </div>
+        <div
+          v-if="loading"
+          key="loading"
+          class="
+            mx-auto
+            flex min-h-full
+            w-full max-w-5xl
+            flex-col justify-between
+            gap-10
+            px-6 py-2
+          "
+          aria-label="Loading Markdown"
+        >
+        <div class="space-y-5">
+          <div
+            class="skeleton h-8 w-2/5"
+          />
+          <div
+            class="skeleton h-3 w-full"
+          />
+          <div
+            class="skeleton h-3 w-4/5"
+          />
+          <div
+            class="skeleton h-3 w-[94%]"
+          />
+        </div>
 
-      <p
-        v-else-if="error"
-        class="text-sm text-error"
-      >
-        {{ error }}
-      </p>
+        <div class="space-y-5">
+          <div
+            class="skeleton h-6 w-1/4"
+          />
+          <div
+            class="skeleton h-3 w-full"
+          />
+          <div
+            class="skeleton h-3 w-[88%]"
+          />
+          <div
+            class="skeleton h-3 w-[96%]"
+          />
+          <div
+            class="skeleton h-3 w-3/5"
+          />
+        </div>
 
-      <div
-        v-else-if="loaded"
-        class="
-          flex min-w-0
-          items-start gap-10
-        "
-      >
+        <div
+          class="skeleton min-h-36 w-full"
+        />
+
+        <div class="space-y-5 pb-6">
+          <div
+            class="skeleton h-6 w-1/3"
+          />
+          <div
+            class="skeleton h-3 w-full"
+          />
+          <div
+            class="skeleton h-3 w-[92%]"
+          />
+          <div
+            class="skeleton h-3 w-2/3"
+          />
+        </div>
+        </div>
+
+        <p
+          v-else-if="error"
+          key="error"
+          class="text-sm text-error"
+        >
+          {{ error }}
+        </p>
+
+        <div
+          v-else-if="loaded"
+          key="content"
+          class="
+            flex min-w-0
+            items-start gap-10
+          "
+        >
         <div
           class="min-w-0 flex-1"
         >
@@ -265,7 +327,8 @@ const handleCatalogActive = (
             @on-active="handleCatalogActive"
           />
         </aside>
-      </div>
+        </div>
+      </Transition>
     </main>
 
     <MarkdownEditorModal
@@ -279,6 +342,62 @@ const handleCatalogActive = (
 </template>
 
 <style scoped>
+@keyframes file-view-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.file-view-toolbar-enter {
+  animation:
+    file-view-content-enter
+    360ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+.file-view-body-enter {
+  animation:
+    file-view-content-enter
+    480ms
+    70ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+.file-content-enter-active {
+  transition:
+    opacity 320ms ease-out,
+    transform 360ms
+      cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.file-content-leave-active {
+  transition: opacity 160ms ease-in;
+}
+
+.file-content-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.file-content-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-view-toolbar-enter,
+  .file-view-body-enter {
+    animation: none;
+  }
+}
+
 .catalog-scrollbar {
   scrollbar-width: none;
 }

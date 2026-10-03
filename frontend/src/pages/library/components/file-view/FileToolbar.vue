@@ -33,12 +33,14 @@ const emit = defineEmits([
 <template>
   <header
     class="
+      relative z-10
       flex h-14 shrink-0
       items-center justify-between
       gap-4
       border-b border-base-content/10
       bg-base-100
       px-6
+      shadow-[0_3px_10px_rgb(0_0_0/0.06)]
     "
   >
     <div
