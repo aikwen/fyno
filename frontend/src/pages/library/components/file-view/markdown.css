@@ -1,0 +1,156 @@
+/*
+ * Fyno Markdown 排版。
+ *
+ * md-editor-v3 继续负责代码块、高亮和编辑器结构；这里只覆盖容易受到
+ * Tailwind Preflight 影响的正文元素，并同时服务阅读视图与编辑器预览。
+ */
+.fyno-markdown .md-editor-preview,
+.fyno-markdown-editor .md-editor-preview {
+  line-height: 1.75;
+}
+
+.fyno-markdown .md-editor-preview h1,
+.fyno-markdown .md-editor-preview h2,
+.fyno-markdown .md-editor-preview h3,
+.fyno-markdown .md-editor-preview h4,
+.fyno-markdown .md-editor-preview h5,
+.fyno-markdown .md-editor-preview h6,
+.fyno-markdown-editor .md-editor-preview h1,
+.fyno-markdown-editor .md-editor-preview h2,
+.fyno-markdown-editor .md-editor-preview h3,
+.fyno-markdown-editor .md-editor-preview h4,
+.fyno-markdown-editor .md-editor-preview h5,
+.fyno-markdown-editor .md-editor-preview h6 {
+  margin-block: 1.6em 0.65em;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.fyno-markdown .md-editor-preview h1,
+.fyno-markdown-editor .md-editor-preview h1 {
+  font-size: 2em;
+}
+
+.fyno-markdown .md-editor-preview h2,
+.fyno-markdown-editor .md-editor-preview h2 {
+  font-size: 1.6em;
+}
+
+.fyno-markdown .md-editor-preview h3,
+.fyno-markdown-editor .md-editor-preview h3 {
+  font-size: 1.35em;
+}
+
+.fyno-markdown .md-editor-preview h4,
+.fyno-markdown-editor .md-editor-preview h4 {
+  font-size: 1.15em;
+}
+
+.fyno-markdown .md-editor-preview h5,
+.fyno-markdown-editor .md-editor-preview h5 {
+  font-size: 1em;
+}
+
+.fyno-markdown .md-editor-preview h6,
+.fyno-markdown-editor .md-editor-preview h6 {
+  font-size: 0.875em;
+  color: color-mix(
+    in oklab,
+    currentColor 65%,
+    transparent
+  );
+}
+
+.fyno-markdown .md-editor-preview > :first-child,
+.fyno-markdown-editor .md-editor-preview > :first-child {
+  margin-block-start: 0;
+}
+
+.fyno-markdown .md-editor-preview p,
+.fyno-markdown-editor .md-editor-preview p {
+  margin-block: 0.9em;
+  line-height: inherit;
+}
+
+.fyno-markdown .md-editor-preview :not(pre) > code,
+.fyno-markdown-editor .md-editor-preview :not(pre) > code {
+  margin: 0;
+  padding: 0.15em 0.4em;
+  border-radius: 0.35em;
+  background:
+    color-mix(
+      in oklab,
+      currentColor 8%,
+      transparent
+    );
+  color: inherit;
+  font-size: 0.875em;
+  line-height: inherit;
+}
+
+.fyno-markdown .md-editor-preview ul,
+.fyno-markdown-editor .md-editor-preview ul {
+  margin-block: 0.9em;
+  padding-inline-start: 1.75em;
+  list-style: disc outside;
+}
+
+.fyno-markdown .md-editor-preview ol,
+.fyno-markdown-editor .md-editor-preview ol {
+  margin-block: 0.9em;
+  padding-inline-start: 1.75em;
+  list-style: decimal outside;
+}
+
+.fyno-markdown .md-editor-preview li,
+.fyno-markdown-editor .md-editor-preview li {
+  margin-block: 0.3em;
+  line-height: inherit;
+}
+
+.fyno-markdown .md-editor-preview li > ul,
+.fyno-markdown .md-editor-preview li > ol,
+.fyno-markdown-editor .md-editor-preview li > ul,
+.fyno-markdown-editor .md-editor-preview li > ol {
+  margin-block: 0.3em;
+}
+
+.fyno-markdown .md-editor-preview blockquote,
+.fyno-markdown-editor .md-editor-preview blockquote {
+  margin-block: 1.25em;
+  padding-block: 0.35em;
+  padding-inline: 1em;
+  border: 0;
+  border-inline-start: 4px solid
+    color-mix(
+      in oklab,
+      currentColor 22%,
+      transparent
+    );
+  border-radius: 0 0.5rem 0.5rem 0;
+  background:
+    color-mix(
+      in oklab,
+      currentColor 4%,
+      transparent
+    );
+  color:
+    color-mix(
+      in oklab,
+      currentColor 76%,
+      transparent
+    );
+}
+
+.fyno-markdown .md-editor-preview blockquote > :first-child,
+.fyno-markdown-editor .md-editor-preview blockquote > :first-child {
+  margin-block-start: 0;
+}
+
+.fyno-markdown .md-editor-preview blockquote > :last-child,
+.fyno-markdown-editor .md-editor-preview blockquote > :last-child {
+  margin-block-end: 0;
+}

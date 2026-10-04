@@ -11,6 +11,7 @@ import {
   MdEditor,
 } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
+import './markdown.css'
 
 import { updateFileContent } from '@/api/library'
 
