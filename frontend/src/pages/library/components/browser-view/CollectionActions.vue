@@ -10,6 +10,7 @@ import createIcon from '@/assets/create.svg'
 import doneIcon from '@/assets/done.svg'
 import editIcon from '@/assets/edit.svg'
 import filterIcon from '@/assets/filter.svg'
+import gitIcon from '@/assets/git.svg'
 import resetIcon from '@/assets/reset.svg'
 import settingsIcon from '@/assets/settings.svg'
 
@@ -32,6 +33,7 @@ const emit = defineEmits([
   'filter',
   'reset-filter',
   'settings',
+  'sync',
 ])
 
 const actionsOpen = ref(false)
@@ -117,6 +119,20 @@ const openSettings = () => {
 
   emit('settings')
 }
+
+const openSync = () => {
+  if (
+    editing.value
+    || filtering.value
+    || !props.libraryReady
+  ) {
+    return
+  }
+
+  closeActions()
+
+  emit('sync')
+}
 </script>
 
 <template>
@@ -160,6 +176,37 @@ const openSettings = () => {
         >
           <img
             :src="settingsIcon"
+            alt=""
+            class="
+              size-5
+              opacity-75
+            "
+          >
+        </button>
+      </div>
+
+      <!-- Sync -->
+      <div
+        class="tooltip tooltip-left"
+        data-tip="Sync"
+      >
+        <button
+          type="button"
+          class="
+            btn btn-lg btn-circle
+            shadow-[0_4px_12px_rgba(0,0,0,0.10)]
+            transition-shadow
+            hover:shadow-[0_6px_16px_rgba(0,0,0,0.14)]
+          "
+          :disabled="
+            editing
+            || filtering
+            || !libraryReady
+          "
+          @click="openSync"
+        >
+          <img
+            :src="gitIcon"
             alt=""
             class="
               size-5

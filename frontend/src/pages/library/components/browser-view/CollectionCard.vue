@@ -391,98 +391,111 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Expanded content -->
-      <div
-        v-if="collection.expanded"
-        class="pb-6 pt-1"
+      <Transition
+        name="collection-details"
       >
-        <!-- Loading -->
         <div
-          v-if="collection.loading"
-          class="space-y-2"
+          v-if="collection.expanded"
+          class="collection-details"
         >
           <div
             class="
-              skeleton
-              h-9 w-full
-              rounded-md
+              min-h-0
+              overflow-hidden
             "
-          />
-
-          <div
-            class="
-              skeleton
-              h-9 w-[94%]
-              rounded-md
-            "
-          />
-
-          <div
-            class="
-              skeleton
-              h-9 w-[88%]
-              rounded-md
-            "
-          />
-        </div>
-
-        <!-- Files -->
-        <div
-          v-else
-          class="space-y-1"
-        >
-          <VueDraggable
-            v-model="collection.files"
-            handle=".file-drag-handle"
-            :animation="160"
-            :disabled="editMode"
-            ghost-class="file-ghost"
-            chosen-class="file-chosen"
-            drag-class="file-dragging"
-            class="space-y-1"
-            @end="handleFileDragEnd"
           >
-            <FileItem
-              v-for="
-                file in collection.files
-              "
-              :key="file.fileId"
-              :file="file"
-              :active="
-                isActiveFile(file)
-              "
-              @open="openFile"
-              @rename="renameFile"
-              @delete="deleteFile"
-            />
-          </VueDraggable>
+            <div class="pb-6 pt-1">
+              <!-- Loading -->
+              <div
+                v-if="collection.loading"
+                class="space-y-2"
+              >
+                <div
+                  class="
+                    skeleton
+                    h-9 w-full
+                    rounded-md
+                  "
+                />
 
-          <!-- Create file -->
-          <button
-            type="button"
-            class="
-              mt-2
-              flex h-10 w-full
-              cursor-pointer
-              items-center justify-center
-              rounded-md
-              border border-dashed
-              border-base-content/25
-              text-xl
-              font-light
-              text-base-content/35
-              transition-colors
-              hover:border-[#005BAC]/70
-              hover:bg-[#005BAC]/5
-              hover:text-[#005BAC]
-            "
-            :disabled="editMode"
-            title="Create note"
-            @click="createFile"
-          >
-            +
-          </button>
+                <div
+                  class="
+                    skeleton
+                    h-9 w-[94%]
+                    rounded-md
+                  "
+                />
+
+                <div
+                  class="
+                    skeleton
+                    h-9 w-[88%]
+                    rounded-md
+                  "
+                />
+              </div>
+
+              <!-- Files -->
+              <div
+                v-else
+                class="space-y-1"
+              >
+                <VueDraggable
+                  v-model="collection.files"
+                  handle=".file-drag-handle"
+                  :animation="160"
+                  :disabled="editMode"
+                  ghost-class="file-ghost"
+                  chosen-class="file-chosen"
+                  drag-class="file-dragging"
+                  class="space-y-1"
+                  @end="handleFileDragEnd"
+                >
+                  <FileItem
+                    v-for="
+                      file in collection.files
+                    "
+                    :key="file.fileId"
+                    :file="file"
+                    :active="
+                      isActiveFile(file)
+                    "
+                    @open="openFile"
+                    @rename="renameFile"
+                    @delete="deleteFile"
+                  />
+                </VueDraggable>
+
+                <!-- Create file -->
+                <button
+                  type="button"
+                  class="
+                    mt-2
+                    flex h-10 w-full
+                    cursor-pointer
+                    items-center justify-center
+                    rounded-md
+                    border border-dashed
+                    border-base-content/25
+                    text-xl
+                    font-light
+                    text-base-content/35
+                    transition-colors
+                    hover:border-[#005BAC]/70
+                    hover:bg-[#005BAC]/5
+                    hover:text-[#005BAC]
+                  "
+                  :disabled="editMode"
+                  title="Create note"
+                  @click="createFile"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </Transition>
     </div>
 
     <!-- Edit mode overlay -->
@@ -553,6 +566,24 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.collection-details {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.collection-details-enter-active,
+.collection-details-leave-active {
+  transition:
+    grid-template-rows 200ms ease-out,
+    opacity 200ms ease-out;
+}
+
+.collection-details-enter-from,
+.collection-details-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
 .detail-tab {
   background: #005bac;
 

@@ -78,6 +78,7 @@ const emit = defineEmits([
 ])
 
 const inputRef = ref(null)
+const dropdownRef = ref(null)
 
 const directory = ref('')
 const dropdownOpen = ref(false)
@@ -131,18 +132,129 @@ const handleFocus = () => {
   }
 }
 
-const handleBlur = () => {
+const handleBlur = (event) => {
+  if (
+    dropdownRef.value?.contains(
+      event.relatedTarget,
+    )
+  ) {
+    return
+  }
+
   inputFocused.value = false
   dropdownOpen.value = false
 }
 
 const selectDirectory = (item) => {
+  clearTimeout(searchTimer)
+
   directory.value = item.path
+  dropdownOpen.value = false
   emit('directory-change')
 
   nextTick(() => {
     inputRef.value?.focus()
+    dropdownOpen.value = false
   })
+}
+
+const getDirectoryItems = () => {
+  return Array.from(
+    dropdownRef.value?.querySelectorAll(
+      '[data-directory-item]',
+    ) ?? [],
+  )
+}
+
+const focusDirectoryItem = (index) => {
+  const items = getDirectoryItems()
+
+  if (items.length === 0) {
+    return
+  }
+
+  const nextIndex = (
+    index + items.length
+  ) % items.length
+
+  items[nextIndex]?.focus()
+}
+
+const focusFirstDirectoryItem = async (
+  event,
+) => {
+  if (
+    !dropdownOpen.value
+    || props.searching
+    || props.directories.length === 0
+  ) {
+    return
+  }
+
+  event?.preventDefault()
+  await nextTick()
+  focusDirectoryItem(0)
+}
+
+const handleDirectoryKeydown = (
+  event,
+  index,
+  item,
+) => {
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault()
+      focusDirectoryItem(index + 1)
+      break
+
+    case 'ArrowUp':
+      event.preventDefault()
+      focusDirectoryItem(index - 1)
+      break
+
+    case 'Home':
+      event.preventDefault()
+      focusDirectoryItem(0)
+      break
+
+    case 'End':
+      event.preventDefault()
+      focusDirectoryItem(
+        props.directories.length - 1,
+      )
+      break
+
+    case 'Enter':
+      event.preventDefault()
+      selectDirectory(item)
+      break
+
+    case 'Escape':
+      event.preventDefault()
+      dropdownOpen.value = false
+
+      nextTick(() => {
+        inputRef.value?.focus()
+        dropdownOpen.value = false
+      })
+      break
+  }
+}
+
+const handleDropdownFocusOut = (event) => {
+  const nextFocus = event.relatedTarget
+
+  if (
+    dropdownRef.value?.contains(
+      nextFocus,
+    )
+    || nextFocus === inputRef.value
+  ) {
+    return
+  }
+
+  inputFocused.value = false
+  dropdownOpen.value = false
 }
 
 const saveDirectory = () => {
@@ -207,6 +319,29 @@ watch(
     }
 
     directory.value = value ?? ''
+  },
+)
+
+watch(
+  [
+    () => props.directories,
+    () => props.searching,
+  ],
+  async ([directories, searching]) => {
+    if (
+      !props.open
+      || !dropdownOpen.value
+      || searching
+      || directories.length === 0
+    ) {
+      return
+    }
+
+    await nextTick()
+    focusDirectoryItem(0)
+  },
+  {
+    flush: 'post',
   },
 )
 
@@ -297,24 +432,24 @@ onBeforeUnmount(() => {
             @input="handleInput"
             @focus="handleFocus"
             @blur="handleBlur"
-            @keyup.enter="
-              saveDirectory
-            "
             @keyup.esc="
               dropdownOpen = false
+            "
+            @keydown.down="
+              focusFirstDirectoryItem
             "
           >
 
           <!-- Directory dropdown -->
           <div
             v-if="
-              inputFocused
-              && dropdownOpen
+              dropdownOpen
               && (
                 searching
                 || directories.length > 0
               )
             "
+            ref="dropdownRef"
             class="
               absolute
               left-0 right-0
@@ -327,6 +462,9 @@ onBeforeUnmount(() => {
               bg-base-100
               shadow-[0_8px_24px_rgba(0,0,0,0.14)]
             "
+            role="listbox"
+            aria-label="Directories"
+            @focusout="handleDropdownFocusOut"
           >
             <!-- Searching -->
             <div
@@ -361,9 +499,10 @@ onBeforeUnmount(() => {
               "
             >
               <button
-                v-for="item in directories"
+                v-for="(item, index) in directories"
                 :key="item.path"
                 type="button"
+                data-directory-item
                 class="
                   flex
                   w-full min-w-0
@@ -374,9 +513,19 @@ onBeforeUnmount(() => {
                   text-left
                   transition-colors
                   hover:bg-base-200
+                  focus:bg-base-200
+                  focus:outline-none
                 "
+                role="option"
                 @pointerdown.prevent="
                   selectDirectory(item)
+                "
+                @keydown="
+                  handleDirectoryKeydown(
+                    $event,
+                    index,
+                    item,
+                  )
                 "
               >
                 <div class="min-w-0">

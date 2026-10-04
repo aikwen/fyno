@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from .collection import router as collection_router
 from .file import router as file_router
+from .sync import router as sync_router
 from .workspace import router as workspace_router
 
 
@@ -21,6 +22,10 @@ router.include_router(
 
 router.include_router(
     file_router,
+)
+
+router.include_router(
+    sync_router,
 )
 
 router.include_router(

@@ -16,6 +16,7 @@ import CollectionCard from './CollectionCard.vue'
 import CollectionFilter from './CollectionFilter.vue'
 import CreateCollectionModal from './CreateCollectionModal.vue'
 import CreateFileModal from './CreateFileModal.vue'
+import SyncModal from './SyncModal.vue'
 import WorkspaceSettingsModal from './WorkspaceSettingsModal.vue'
 import { useCollectionDrag } from './browser-view-composable/useCollectionDrag'
 import { useCollectionPagination } from './browser-view-composable/useCollectionPagination'
@@ -163,6 +164,20 @@ const {
 const libraryReady = computed(
   () => workspaceInitialized.value,
 )
+
+const syncModalOpen = ref(false)
+
+const openSyncModal = () => {
+  if (!libraryReady.value) {
+    return
+  }
+
+  syncModalOpen.value = true
+}
+
+const closeSyncModal = () => {
+  syncModalOpen.value = false
+}
 
 const {
   handleDragStart,
@@ -356,6 +371,7 @@ onBeforeUnmount(() => {
       @settings="
         openWorkspaceSettings
       "
+      @sync="openSyncModal"
     />
 
     <WorkspaceSettingsModal
@@ -379,6 +395,11 @@ onBeforeUnmount(() => {
       @directory-change="resetDirectorySaveStatus"
       @reload="reloadWorkspace"
       @rebuild="rebuildWorkspace"
+    />
+
+    <SyncModal
+      :open="syncModalOpen"
+      @close="closeSyncModal"
     />
 
     <CreateCollectionModal

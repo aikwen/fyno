@@ -389,13 +389,4 @@ onBeforeUnmount(() => {
 .fyno-markdown-editor :deep(.md-editor-content) {
   min-width: 0;
 }
-
-/*
- * 让文末标题也能滚动到目录的 active 判定线，
- * 保留 MdEditor 原生的目录跳转与高亮逻辑。
- */
-.fyno-markdown-editor :deep(.md-editor-preview) {
-  padding-bottom:
-    calc(100dvh - 10rem);
-}
 </style>

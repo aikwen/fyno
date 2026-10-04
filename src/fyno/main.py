@@ -50,6 +50,7 @@ HEALTH_URL = f"{FYNO_URL}/api/health"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ASSETS_DIR = STATIC_DIR / "assets"
 INDEX_FILE = STATIC_DIR / "index.html"
+FAVICON_FILE = STATIC_DIR / "favicon.svg"
 
 
 @asynccontextmanager
@@ -113,6 +114,16 @@ if ASSETS_DIR.is_dir():
         name="assets",
     )
 
+
+@app.get(
+    "/favicon.svg",
+    include_in_schema=False,
+)
+def favicon():
+    return FileResponse(
+        FAVICON_FILE,
+        media_type="image/svg+xml",
+    )
 
 @app.get(
     "/{full_path:path}",
