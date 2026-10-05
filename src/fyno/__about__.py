@@ -1,4 +1,4 @@
 # SPDX-FileCopyrightText: 2026-present aikwen <kwen.zou@outlook.com>
 #
 # SPDX-License-Identifier: MIT
-__version__ = "0.1.1b7"
+__version__ = "0.1.1b8"
