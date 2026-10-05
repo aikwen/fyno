@@ -417,13 +417,29 @@ const handleCatalogActive = (
 
 :deep(
   .fyno-markdown-catalog
+  .md-editor-catalog-link
+) {
+  padding-block: 1px;
+}
+
+:deep(
+  .fyno-markdown-catalog
+  .md-editor-catalog-wrapper
+  > .md-editor-catalog-link:first-of-type
+) {
+  padding-block-start: 1px;
+}
+
+:deep(
+  .fyno-markdown-catalog
   .md-editor-catalog-link span
 ) {
   border-radius: 0.375rem;
   color: inherit;
   font-size: 0.75rem;
   line-height: 1.25rem;
-  padding: 0.25rem 0.5rem;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
 }
 
 :deep(
