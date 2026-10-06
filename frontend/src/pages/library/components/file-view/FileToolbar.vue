@@ -1,8 +1,11 @@
 <script setup>
+import { computed } from 'vue'
+
 import editMarkdownIcon from '@/assets/edit-markdown.svg'
+import filePathIcon from '@/assets/file-path.svg'
 import refreshIcon from '@/assets/refresh.svg'
 
-defineProps({
+const props = defineProps({
   collectionName: {
     type: String,
     default: '',
@@ -22,12 +25,35 @@ defineProps({
     type: Boolean,
     default: false,
   },
+
+  canCopyPath: {
+    type: Boolean,
+    default: false,
+  },
+
+  pathCopyStatus: {
+    type: String,
+    default: 'idle',
+  },
 })
 
 const emit = defineEmits([
   'refresh',
   'edit',
+  'copy-path',
 ])
+
+const pathTooltip = computed(() => {
+  if (props.pathCopyStatus === 'copied') {
+    return 'File path copied'
+  }
+
+  if (props.pathCopyStatus === 'error') {
+    return 'Failed to copy file path'
+  }
+
+  return 'Copy Markdown file path'
+})
 </script>
 
 <template>
@@ -64,55 +90,93 @@ const emit = defineEmits([
         items-center gap-1
       "
     >
-      <button
-        type="button"
-        class="
-          flex size-8
-          cursor-pointer
-          items-center justify-center
-          rounded-md
-          transition-colors
-          hover:bg-base-content/5
-          disabled:cursor-not-allowed
-          disabled:opacity-35
-        "
-        :disabled="loading"
-        title="Refresh"
-        aria-label="Refresh Markdown"
-        @click="emit('refresh')"
+      <div
+        class="tooltip tooltip-bottom"
+        data-tip="Refresh Markdown"
       >
-        <img
-          :src="refreshIcon"
-          alt=""
-          class="size-[17px]"
+        <button
+          type="button"
+          class="
+            flex size-8
+            cursor-pointer
+            items-center justify-center
+            rounded-md
+            transition-colors
+            hover:bg-base-content/5
+            disabled:cursor-not-allowed
+            disabled:opacity-35
+          "
+          :disabled="loading"
+          aria-label="Refresh Markdown"
+          @click="emit('refresh')"
         >
-      </button>
+          <img
+            :src="refreshIcon"
+            alt=""
+            class="size-[17px]"
+          >
+        </button>
+      </div>
 
-      <button
-        type="button"
-        class="
-          flex size-8
-          cursor-pointer
-          items-center justify-center
-          rounded-md
-          transition-colors
-          hover:bg-base-content/5
-          disabled:cursor-not-allowed
-          disabled:opacity-35
-        "
-        :disabled="
-          loading || !canEdit
-        "
-        title="Edit Markdown"
-        aria-label="Edit Markdown"
-        @click="emit('edit')"
+      <div
+        class="tooltip tooltip-left"
+        :data-tip="pathTooltip"
       >
-        <img
-          :src="editMarkdownIcon"
-          alt=""
-          class="size-[17px]"
+        <button
+          type="button"
+          class="
+            flex size-8
+            cursor-pointer
+            items-center justify-center
+            rounded-md
+            transition-colors
+            hover:bg-base-content/5
+            disabled:cursor-not-allowed
+            disabled:opacity-35
+          "
+          :disabled="
+            loading || !canCopyPath
+          "
+          aria-label="Copy Markdown file path"
+          @click="emit('copy-path')"
         >
-      </button>
+          <img
+            :src="filePathIcon"
+            alt=""
+            class="size-[17px]"
+          >
+        </button>
+      </div>
+
+      <div
+        class="tooltip tooltip-left"
+        data-tip="Edit Markdown"
+      >
+        <button
+          type="button"
+          class="
+            flex size-8
+            cursor-pointer
+            items-center justify-center
+            rounded-md
+            transition-colors
+            hover:bg-base-content/5
+            disabled:cursor-not-allowed
+            disabled:opacity-35
+          "
+          :disabled="
+            loading || !canEdit
+          "
+          aria-label="Edit Markdown"
+          @click="emit('edit')"
+        >
+          <img
+            :src="editMarkdownIcon"
+            alt=""
+            class="size-[17px]"
+          >
+        </button>
+      </div>
     </div>
   </header>
 </template>

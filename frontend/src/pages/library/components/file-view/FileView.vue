@@ -2,6 +2,7 @@
 import {
   computed,
   nextTick,
+  onBeforeUnmount,
   ref,
   useId,
   watch,
@@ -23,12 +24,16 @@ const props = defineProps({
 })
 
 const content = ref('')
+const filePath = ref('')
 const loading = ref(false)
 const error = ref(null)
 const loaded = ref(false)
 const editorOpen = ref(false)
+const pathCopyStatus = ref('idle')
 const contentScrollRef = ref(null)
 const catalogRef = ref(null)
+
+let pathCopyTimer = null
 
 const previewId =
   `file-view-${useId()}`
@@ -49,6 +54,34 @@ const canEdit = computed(() => {
   )
 })
 
+const canCopyPath = computed(() => {
+  return (
+    canEdit.value
+    && Boolean(filePath.value)
+  )
+})
+
+const clearPathCopyTimer = () => {
+  if (pathCopyTimer === null) {
+    return
+  }
+
+  window.clearTimeout(pathCopyTimer)
+  pathCopyTimer = null
+}
+
+const resetPathCopyStatusLater = () => {
+  clearPathCopyTimer()
+
+  pathCopyTimer = window.setTimeout(
+    () => {
+      pathCopyStatus.value = 'idle'
+      pathCopyTimer = null
+    },
+    1600,
+  )
+}
+
 /*
  * collectionId/fileId 同时充当请求快照。
  * 切换文件后，旧请求可以自然结束，但不能再写回当前界面。
@@ -59,10 +92,13 @@ const loadFile = async () => {
   const fileId = props.file.fileId
 
   content.value = ''
+  filePath.value = ''
   loading.value = true
   error.value = null
   loaded.value = false
   editorOpen.value = false
+  pathCopyStatus.value = 'idle'
+  clearPathCopyTimer()
 
   try {
     const response = await getFileContent({
@@ -79,6 +115,7 @@ const loadFile = async () => {
     }
 
     content.value = response.content
+    filePath.value = response.path
     loaded.value = true
     loading.value = false
   } catch (requestError) {
@@ -116,6 +153,23 @@ const openEditor = () => {
   }
 
   editorOpen.value = true
+}
+
+const copyFilePath = async () => {
+  if (!canCopyPath.value) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(
+      filePath.value,
+    )
+    pathCopyStatus.value = 'copied'
+  } catch {
+    pathCopyStatus.value = 'error'
+  }
+
+  resetPathCopyStatusLater()
 }
 
 const updateContent = (value) => {
@@ -158,6 +212,10 @@ const handleCatalogActive = (
     )
   })
 }
+
+onBeforeUnmount(() => {
+  clearPathCopyTimer()
+})
 </script>
 
 <template>
@@ -175,8 +233,11 @@ const handleCatalogActive = (
       :file-name="file.name"
       :loading="loading"
       :can-edit="canEdit"
+      :can-copy-path="canCopyPath"
+      :path-copy-status="pathCopyStatus"
       @refresh="loadFile"
       @edit="openEditor"
+      @copy-path="copyFilePath"
     />
 
     <main

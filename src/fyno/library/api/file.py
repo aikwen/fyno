@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from ..domain.file import LibraryFile
 from ..domain.library import Library
 from ..workspace import file as file_workspace
+from ..workspace.workspace import get_workspace
 from .dependencies import require_library
 
 
@@ -76,6 +77,7 @@ class FileContentResponse(BaseModel):
     collectionId: str
     fileId: str
     content: str
+    path: str
 
 
 class SuccessResponse(BaseModel):
@@ -173,10 +175,18 @@ def get_file_content(
             detail="File content not found",
         )
 
+    workspace = get_workspace()
+    assert workspace is not None
+
     return FileContentResponse(
         collectionId=collection_id,
         fileId=file_id,
         content=content,
+        path=str(
+            workspace
+            / collection_id
+            / f"{file_id}.md"
+        ),
     )
 
 
@@ -260,10 +270,18 @@ def update_file_content(
             detail="File content not found",
         )
 
+    workspace = get_workspace()
+    assert workspace is not None
+
     return FileContentResponse(
         collectionId=collection_id,
         fileId=file_id,
         content=request.content,
+        path=str(
+            workspace
+            / collection_id
+            / f"{file_id}.md"
+        ),
     )
 
 
