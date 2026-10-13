@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "fyno"
 dynamic = ["version"]
-description = "A lightweight personal workbench."
+description = ""
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-keywords = ["workbench", "tools", "markdown"]
+keywords = []
 authors = [
   { name = "aikwen", email = "kwen.zou@outlook.com" },
 ]
