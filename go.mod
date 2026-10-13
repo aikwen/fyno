@@ -1,4 +1,4 @@
-module fyno
+module github.com/aikwen/fyno
 
 go 1.23.0
 
