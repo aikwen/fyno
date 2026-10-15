@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 
 	"github.com/aikwen/fyno/internal/domain"
 )
@@ -74,10 +76,21 @@ func (s *LibraryService) GetPage(ctx context.Context, id int64) (*domain.Page, j
 	}
 
 	content, err := s.store.LoadDocument(id)
-	if err != nil {
+	if err == nil {
+		return page, content, nil
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
 		return nil, nil, fmt.Errorf("get page %d: load content: %w", id, err)
 	}
 
+	if err := s.store.CreateDocumentIfAbsent(id, defaultPageContent); err != nil && !errors.Is(err, fs.ErrExist) {
+		return nil, nil, fmt.Errorf("get page %d: create missing content: %w", id, err)
+	}
+
+	content, err = s.store.LoadDocument(id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get page %d: load initialized content: %w", id, err)
+	}
 	return page, content, nil
 }
 
