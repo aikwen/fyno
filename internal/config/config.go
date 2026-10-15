@@ -12,9 +12,11 @@ import (
 )
 
 const (
-	appDir     = "Fyno"
-	versionDir = "v2"
-	configFile = "config.json"
+	appDir        = "Fyno"
+	versionDir    = "v2"
+	configFile    = "config.json"
+	DefaultWidth  = 1280
+	DefaultHeight = 800
 )
 
 type Window struct {
@@ -31,8 +33,19 @@ type Config struct {
 	Window         Window `json:"window"`
 }
 
+// Default 返回 Fyno 的默认配置。
+func Default() *Config {
+	return &Config{
+		Window: Window{
+			Width:  DefaultWidth,
+			Height: DefaultHeight,
+		},
+	}
+}
+
 // Load 从当前用户的配置目录读取 Fyno 配置。
-// 配置文件不存在时返回零值配置，不创建文件，也不校验其中的路径和 ID。
+// 文件不存在时只返回默认配置；JSON 损坏时保存并返回默认配置。
+// 本方法不校验配置中的路径和 ID。
 func Load() (*Config, error) {
 	baseDir, err := os.UserConfigDir()
 	if err != nil {
@@ -43,14 +56,18 @@ func Load() (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return &Config{}, nil
+			return Default(), nil
 		}
 		return nil, fmt.Errorf("load config: read file: %w", err)
 	}
 
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("load config: unmarshal JSON: %w", err)
+		defaultConfig := Default()
+		if saveErr := Save(defaultConfig); saveErr != nil {
+			return nil, fmt.Errorf("load config: recover invalid JSON: %w", saveErr)
+		}
+		return defaultConfig, nil
 	}
 
 	return &cfg, nil
