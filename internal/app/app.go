@@ -1,0 +1,54 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/aikwen/fyno/internal/config"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
+// App 管理 Wails 生命周期并提供前端 Bridge 方法。
+type App struct {
+	ctx    context.Context
+	config *config.Config
+}
+
+// NewApp 创建 App。
+func NewApp(cfg *config.Config) *App {
+	return &App{
+		config: cfg,
+	}
+}
+
+// Startup 在应用启动时保存 Wails context。
+func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
+}
+
+// BeforeClose 在窗口仍然有效时记录普通状态下的窗口尺寸。
+func (a *App) BeforeClose(ctx context.Context) bool {
+	if a.config == nil || !runtime.WindowIsNormal(ctx) {
+		return false
+	}
+
+	width, height := runtime.WindowGetSize(ctx)
+	if width > 0 && height > 0 {
+		a.config.Window.Width = width
+		a.config.Window.Height = height
+	}
+	return false
+}
+
+// Shutdown 在应用退出时保存完整配置。
+func (a *App) Shutdown(ctx context.Context) {
+	if err := config.Save(a.config); err != nil {
+		log.Printf("save config on shutdown: %v", err)
+	}
+}
+
+// Greet 返回指定名称的问候语。
+func (a *App) Greet(name string) string {
+	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
