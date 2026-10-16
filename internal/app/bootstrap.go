@@ -10,6 +10,7 @@ import (
 	"github.com/aikwen/fyno/internal/config"
 	"github.com/aikwen/fyno/internal/service"
 	"github.com/aikwen/fyno/internal/store"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // WorkspaceResult 描述前端应进入 Welcome 还是 Workspace。
@@ -17,6 +18,13 @@ type WorkspaceResult struct {
 	Ready   bool   `json:"ready"`
 	RootDir string `json:"rootDir"`
 	Error   string `json:"error"`
+}
+
+// SelectDirectory 打开系统目录选择器，返回用户选择的目录。
+func (a *App) SelectDirectory() (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择 Fyno 工作目录",
+	})
 }
 
 // GetStartupState 恢复配置中记录的工作目录。
