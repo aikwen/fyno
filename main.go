@@ -16,19 +16,18 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-	cfg, err := config.Load()
+	data, err := config.Parse()
 	if err != nil {
-		log.Printf("load config: %v", err)
+		log.Printf("parse config: %v", err)
 		return
 	}
-	application := app.NewApp(cfg)
-	configData := cfg.Get()
+	application := app.NewApp(data)
 
 	// Create application with options
 	err = wails.Run(&options.App{
 		Title:     "fyno",
-		Width:     configData.Window.Width,
-		Height:    configData.Window.Height,
+		Width:     data.Window.Width,
+		Height:    data.Window.Height,
 		MinWidth:  960,
 		MinHeight: 600,
 		AssetServer: &assetserver.Options{

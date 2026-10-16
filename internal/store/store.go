@@ -20,12 +20,7 @@ type Store struct {
 	db      *sql.DB
 }
 
-// New 创建 Store，不执行初始化。
-func New(rootDir string) *Store {
-	return &Store{rootDir: rootDir}
-}
-
-// Init 初始化或校验 Fyno 数据根目录。
+// Open 初始化或校验 Fyno 数据根目录，并返回可用的 Store。
 //
 // 规则：
 //   - RootDir 必须存在且为目录。
@@ -33,23 +28,54 @@ func New(rootDir string) *Store {
 //   - 已有目录必须恰好包含 fyno.db、meta/ 和 data/。
 //   - 已有数据库必须通过完整性检查，且包含三张业务表。
 //   - 已有数据不会被覆盖，也不会自动修复。
-//   - 重复调用不会重新初始化已打开的 Store。
-func (s *Store) Init() error {
-	if s.db != nil {
-		return nil
+func Open(rootDir string) (s *Store, err error) {
+	candidate := &Store{rootDir: rootDir}
+	s = candidate
+	defer func() {
+		if err != nil {
+			_ = candidate.Close()
+			s = nil
+		}
+	}()
+
+	names, err := s.rootEntries()
+	if err != nil {
+		return nil, err
 	}
 
+	// 新目录：初始化 Fyno 存储环境。
+	if len(names) == 0 {
+		if err := s.initDirectories(); err != nil {
+			return nil, err
+		}
+		if err := s.openDatabase(true); err != nil {
+			return nil, err
+		}
+		return s, nil
+	}
+
+	// 已有目录：严格校验，不执行自动修复。
+	if err := s.validateDirectories(names); err != nil {
+		return nil, err
+	}
+	if err := s.openDatabase(false); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func (s *Store) rootEntries() ([]string, error) {
 	info, err := os.Stat(s.rootDir)
 	if err != nil {
-		return fmt.Errorf("stat root directory: %w", err)
+		return nil, fmt.Errorf("stat root directory: %w", err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("root path is not a directory: %s", s.rootDir)
+		return nil, fmt.Errorf("root path is not a directory: %s", s.rootDir)
 	}
 
 	entries, err := os.ReadDir(s.rootDir)
 	if err != nil {
-		return fmt.Errorf("read root directory: %w", err)
+		return nil, fmt.Errorf("read root directory: %w", err)
 	}
 
 	var names []string
@@ -58,21 +84,7 @@ func (s *Store) Init() error {
 			names = append(names, entry.Name())
 		}
 	}
-
-	// 新目录：初始化 Fyno 存储环境。
-	if len(names) == 0 {
-		if err := s.initDirectories(); err != nil {
-			return err
-		}
-		return s.openDatabase(true)
-	}
-
-	// 已有目录：严格校验，不执行自动修复。
-	if err := s.validateDirectories(names); err != nil {
-		return err
-	}
-
-	return s.openDatabase(false)
+	return names, nil
 }
 
 // initDirectories 创建全新的 Fyno 存储目录。

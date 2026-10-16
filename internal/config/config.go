@@ -40,25 +40,27 @@ type Config struct {
 	data Data
 }
 
-// Default 返回 Fyno 的默认配置。
-func Default() *Config {
-	return &Config{
-		data: Data{
-			Window: Window{
-				Width:  DefaultWidth,
-				Height: DefaultHeight,
-			},
+// Default 返回 Fyno 的默认配置数据。
+func Default() Data {
+	return Data{
+		Window: Window{
+			Width:  DefaultWidth,
+			Height: DefaultHeight,
 		},
 	}
 }
 
-// Load 从当前用户的配置目录读取 Fyno 配置。
-// 文件不存在时只返回默认配置；JSON 损坏时保存并返回默认配置。
-// 本方法不校验配置中的路径和 ID。
-func Load() (*Config, error) {
+// New 使用配置数据创建运行时 Config。
+func New(data Data) *Config {
+	return &Config{data: data}
+}
+
+// Parse 从当前用户的配置目录解析 Fyno 配置数据。
+// 文件不存在时返回默认数据；JSON 损坏时保存并返回默认数据。
+func Parse() (Data, error) {
 	baseDir, err := os.UserConfigDir()
 	if err != nil {
-		return nil, fmt.Errorf("load config: get user config directory: %w", err)
+		return Data{}, fmt.Errorf("parse config: get user config directory: %w", err)
 	}
 
 	path := filepath.Join(baseDir, appDir, versionDir, configFile)
@@ -67,19 +69,19 @@ func Load() (*Config, error) {
 		if errors.Is(err, fs.ErrNotExist) {
 			return Default(), nil
 		}
-		return nil, fmt.Errorf("load config: read file: %w", err)
+		return Data{}, fmt.Errorf("parse config: read file: %w", err)
 	}
 
 	var configData Data
 	if err := json.Unmarshal(data, &configData); err != nil {
-		defaultConfig := Default()
-		if saveErr := defaultConfig.Save(); saveErr != nil {
-			return nil, fmt.Errorf("load config: recover invalid JSON: %w", saveErr)
+		defaultData := Default()
+		if saveErr := saveData(defaultData); saveErr != nil {
+			return Data{}, fmt.Errorf("parse config: recover invalid JSON: %w", saveErr)
 		}
-		return defaultConfig, nil
+		return defaultData, nil
 	}
 
-	return &Config{data: configData}, nil
+	return configData, nil
 }
 
 // Get 返回当前内存配置的独立值副本。
@@ -127,7 +129,11 @@ func (c *Config) Save() error {
 // save 保存当前配置，不自行加锁。
 // 调用方必须持有 Config 的写锁。
 func (c *Config) save() error {
-	data, err := json.MarshalIndent(c.data, "", "  ")
+	return saveData(c.data)
+}
+
+func saveData(configData Data) error {
+	data, err := json.MarshalIndent(configData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("save config: marshal JSON: %w", err)
 	}
