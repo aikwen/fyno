@@ -22,12 +22,13 @@ func main() {
 		return
 	}
 	application := app.NewApp(cfg)
+	configData := cfg.Get()
 
 	// Create application with options
 	err = wails.Run(&options.App{
 		Title:     "fyno",
-		Width:     cfg.Window.Width,
-		Height:    cfg.Window.Height,
+		Width:     configData.Window.Width,
+		Height:    configData.Window.Height,
 		MinWidth:  960,
 		MinHeight: 600,
 		AssetServer: &assetserver.Options{

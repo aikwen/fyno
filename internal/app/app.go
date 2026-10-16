@@ -35,15 +35,22 @@ func (a *App) BeforeClose(ctx context.Context) bool {
 
 	width, height := runtime.WindowGetSize(ctx)
 	if width > 0 && height > 0 {
-		a.config.Window.Width = width
-		a.config.Window.Height = height
+		if err := a.config.Update(func(data *config.Data) {
+			data.Window.Width = width
+			data.Window.Height = height
+		}); err != nil {
+			log.Printf("update window size: %v", err)
+		}
 	}
 	return false
 }
 
 // Shutdown 在应用退出时保存完整配置。
 func (a *App) Shutdown(ctx context.Context) {
-	if err := config.Save(a.config); err != nil {
+	if a.config == nil {
+		return
+	}
+	if err := a.config.Save(); err != nil {
 		log.Printf("save config on shutdown: %v", err)
 	}
 }
