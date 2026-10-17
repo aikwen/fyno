@@ -30,6 +30,35 @@ function selectSection({ notebookID, sectionID }) {
   selectedSectionID.value = sectionID
   selectedPageID.value = null
 }
+
+function deleteNotebook({ notebookID, sectionIDs }) {
+  if (
+    selectedNotebookID.value !== notebookID &&
+    !sectionIDs.includes(selectedSectionID.value)
+  ) {
+    return
+  }
+
+  selectedNotebookID.value = ''
+  selectedSectionID.value = ''
+  selectedPageID.value = null
+}
+
+function deleteSection({ notebookID, sectionID }) {
+  if (selectedSectionID.value !== sectionID) {
+    return
+  }
+
+  selectedNotebookID.value = notebookID
+  selectedSectionID.value = ''
+  selectedPageID.value = null
+}
+
+function deletePage(pageID) {
+  if (selectedPageID.value === pageID) {
+    selectedPageID.value = null
+  }
+}
 </script>
 
 <template>
@@ -41,12 +70,15 @@ function selectSection({ notebookID, sectionID }) {
       @toggle="sidebarExpanded = !sidebarExpanded"
       @select-notebook="selectNotebook"
       @select-section="selectSection"
+      @delete-notebook="deleteNotebook"
+      @delete-section="deleteSection"
     />
     <div class="flex min-w-0 flex-1 bg-white">
       <PageList
         :selected-page-i-d="selectedPageID"
         :selected-section-i-d="selectedSectionID"
         @select-page="selectedPageID = $event"
+        @delete-page="deletePage"
       />
       <PageEditor :selected-page-i-d="selectedPageID" :warning="appState.error" />
     </div>
