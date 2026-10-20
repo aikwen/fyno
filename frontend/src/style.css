@@ -21,3 +21,30 @@ body {
   -webkit-mask: var(--icon-url) center / contain no-repeat;
   mask: var(--icon-url) center / contain no-repeat;
 }
+
+.workspace-scroll {
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.workspace-scroll:hover {
+  scrollbar-color: #aeb7c2 transparent;
+}
+
+.workspace-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.workspace-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workspace-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.workspace-scroll:hover::-webkit-scrollbar-thumb {
+  background: #aeb7c2;
+}

@@ -37,6 +37,20 @@ const contextMenuItems = [
 const editingPageID = ref(null)
 const editTitle = ref('')
 const renameInput = ref(null)
+let nextPageID = Math.max(...pages.value.map((page) => page.id), 0) + 1
+
+function addPage() {
+  if (!props.selectedSectionID) {
+    return
+  }
+
+  const page = {
+    id: nextPageID++,
+    title: '未命名',
+  }
+  pages.value.push(page)
+  emit('select-page', page.id)
+}
 
 function openPageMenu(event, page) {
   Object.assign(contextMenu, {
@@ -111,13 +125,14 @@ function handleContextAction(action) {
         type="button"
         class="inline-flex h-7 w-32 items-center justify-center gap-2 rounded-md border border-slate-300/80 bg-slate-50/80 text-sm text-violet-600 transition-[background-color,transform] hover:bg-violet-50 active:translate-y-px active:bg-violet-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 disabled:pointer-events-none disabled:cursor-default disabled:opacity-45"
         :disabled="!props.selectedSectionID"
+        @click="addPage"
       >
         <Icon :src="pageEditorIcon" class="h-4 w-4 shrink-0" />
         <span>添加页</span>
       </button>
     </header>
 
-    <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+    <div class="workspace-scroll mr-1 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
       <template v-if="props.selectedSectionID">
         <div
           v-for="page in pages"

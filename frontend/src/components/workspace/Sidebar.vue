@@ -266,7 +266,7 @@ function handleContextAction(action) {
 
     </div>
 
-    <div v-if="expanded" class="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+    <div v-if="expanded" class="workspace-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-3">
       <div v-for="notebook in notebooks" :key="notebook.id" class="mb-1">
         <div
           class="flex h-9 w-full min-w-0 items-center gap-1.5 rounded-lg px-2 text-left text-sm font-medium text-slate-700 hover:bg-white/50"
@@ -372,32 +372,3 @@ function handleContextAction(action) {
     @close="closeContextMenu"
   />
 </template>
-
-<style scoped>
-.sidebar-scroll {
-  scrollbar-color: transparent transparent;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-}
-
-.sidebar-scroll:hover {
-  scrollbar-color: #aeb7c2 transparent;
-}
-
-.sidebar-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: transparent;
-}
-
-.sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background: #aeb7c2;
-}
-</style>
