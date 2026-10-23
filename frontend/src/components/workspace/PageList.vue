@@ -1,7 +1,8 @@
 <script setup>
-import { nextTick, reactive, ref } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 import ContextMenu from '../ContextMenu.vue'
 import Icon from '../Icon.vue'
+import { pageApi } from '../../api/page.js'
 import pageEditorIcon from '../../assets/icon/page-editor.svg'
 import renameIcon from '../../assets/icon/rename.svg'
 import deleteIcon from '../../assets/icon/delete.svg'
@@ -12,18 +13,19 @@ const props = defineProps({
     default: null,
   },
   selectedSectionID: {
-    type: String,
-    default: '',
+    type: Number,
+    default: null,
   },
 })
 
 const emit = defineEmits(['select-page', 'delete-page'])
 
-const pages = ref([
-  { id: 1, title: '1111' },
-  { id: 2, title: '未命名' },
-  { id: 3, title: '未命名' },
-])
+const pages = ref([])
+const loadingPages = ref(false)
+const creatingPage = ref(false)
+const pageError = ref('')
+const updatingPages = reactive(new Set())
+const deletingPages = reactive(new Set())
 const contextMenu = reactive({
   open: false,
   x: 0,
@@ -37,19 +39,71 @@ const contextMenuItems = [
 const editingPageID = ref(null)
 const editTitle = ref('')
 const renameInput = ref(null)
-let nextPageID = Math.max(...pages.value.map((page) => page.id), 0) + 1
+let pageRequest = 0
 
-function addPage() {
-  if (!props.selectedSectionID) {
+watch(
+  () => props.selectedSectionID,
+  (sectionID) => {
+    void loadPages(sectionID)
+  },
+  { immediate: true },
+)
+
+function describeError(action, error) {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  return message ? `${action}失败：${message}` : `${action}失败，请稍后重试`
+}
+
+async function loadPages(sectionID) {
+  const request = ++pageRequest
+  pages.value = []
+  pageError.value = ''
+  editingPageID.value = null
+  contextMenu.open = false
+
+  if (sectionID === null) {
+    loadingPages.value = false
     return
   }
 
-  const page = {
-    id: nextPageID++,
-    title: '未命名',
+  loadingPages.value = true
+  try {
+    const result = await pageApi.list(sectionID)
+    if (request === pageRequest && props.selectedSectionID === sectionID) {
+      pages.value = result ?? []
+    }
+  } catch (error) {
+    if (request === pageRequest && props.selectedSectionID === sectionID) {
+      pageError.value = describeError('加载页面', error)
+    }
+  } finally {
+    if (request === pageRequest) {
+      loadingPages.value = false
+    }
   }
-  pages.value.push(page)
-  emit('select-page', page.id)
+}
+
+async function addPage() {
+  const sectionID = props.selectedSectionID
+  if (sectionID === null || loadingPages.value || creatingPage.value) {
+    return
+  }
+
+  creatingPage.value = true
+  pageError.value = ''
+  try {
+    const page = await pageApi.create(sectionID, '未命名')
+    if (props.selectedSectionID === sectionID) {
+      pages.value.push(page)
+      emit('select-page', page.id)
+    }
+  } catch (error) {
+    if (props.selectedSectionID === sectionID) {
+      pageError.value = describeError('添加页面', error)
+    }
+  } finally {
+    creatingPage.value = false
+  }
 }
 
 function openPageMenu(event, page) {
@@ -80,22 +134,67 @@ function startRename(page) {
   })
 }
 
-function confirmRename() {
+async function confirmRename() {
   if (editingPageID.value === null) {
     return
   }
 
+  const pageID = editingPageID.value
+  const sectionID = props.selectedSectionID
   const title = editTitle.value.trim()
-  const page = pages.value.find((item) => item.id === editingPageID.value)
-  if (title && page) {
-    page.title = title
+  editingPageID.value = null
+  const page = pages.value.find((item) => item.id === pageID)
+  if (!title || !page || title === page.title || updatingPages.has(pageID)) {
+    return
   }
 
-  editingPageID.value = null
+  updatingPages.add(pageID)
+  pageError.value = ''
+  try {
+    await pageApi.update(pageID, title)
+    if (props.selectedSectionID === sectionID) {
+      const currentPage = pages.value.find((item) => item.id === pageID)
+      if (currentPage === page) {
+        page.title = title
+      }
+    }
+  } catch (error) {
+    if (props.selectedSectionID === sectionID) {
+      pageError.value = describeError('重命名页面', error)
+    }
+  } finally {
+    updatingPages.delete(pageID)
+  }
 }
 
 function cancelRename() {
   editingPageID.value = null
+}
+
+async function deletePage(page) {
+  const sectionID = props.selectedSectionID
+  if (deletingPages.has(page.id) || updatingPages.has(page.id)) {
+    return
+  }
+
+  deletingPages.add(page.id)
+  pageError.value = ''
+  try {
+    await pageApi.remove(page.id)
+    if (props.selectedSectionID === sectionID) {
+      const pageIndex = pages.value.findIndex((item) => item.id === page.id)
+      if (pageIndex !== -1) {
+        pages.value.splice(pageIndex, 1)
+      }
+    }
+    emit('delete-page', page.id)
+  } catch (error) {
+    if (props.selectedSectionID === sectionID) {
+      pageError.value = describeError('删除页面', error)
+    }
+  } finally {
+    deletingPages.delete(page.id)
+  }
 }
 
 function handleContextAction(action) {
@@ -110,9 +209,7 @@ function handleContextAction(action) {
   }
 
   if (action.id === 'delete') {
-    const pageIndex = pages.value.findIndex((item) => item.id === page.id)
-    pages.value.splice(pageIndex, 1)
-    emit('delete-page', page.id)
+    void deletePage(page)
   }
 }
 </script>
@@ -124,7 +221,7 @@ function handleContextAction(action) {
       <button
         type="button"
         class="inline-flex h-7 w-32 items-center justify-center gap-2 rounded-md border border-slate-300/80 bg-slate-50/80 text-sm text-violet-600 transition-[background-color,transform] hover:bg-violet-50 active:translate-y-px active:bg-violet-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 disabled:pointer-events-none disabled:cursor-default disabled:opacity-45"
-        :disabled="!props.selectedSectionID"
+        :disabled="props.selectedSectionID === null || loadingPages || creatingPage"
         @click="addPage"
       >
         <Icon :src="pageEditorIcon" class="h-4 w-4 shrink-0" />
@@ -132,8 +229,18 @@ function handleContextAction(action) {
       </button>
     </header>
 
-    <div class="workspace-scroll mr-1 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-      <template v-if="props.selectedSectionID">
+    <div
+      class="workspace-scroll mr-1 min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+      :aria-busy="loadingPages"
+    >
+      <p v-if="pageError" role="alert" class="mb-2 text-xs text-red-600">
+        {{ pageError }}
+      </p>
+      <p v-else-if="loadingPages" class="mb-2 text-xs text-slate-500">
+        正在加载页面…
+      </p>
+
+      <template v-if="props.selectedSectionID !== null">
         <div
           v-for="page in pages"
           :key="page.id"

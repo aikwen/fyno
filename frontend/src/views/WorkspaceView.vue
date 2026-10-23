@@ -6,9 +6,9 @@ import PageList from '../components/workspace/PageList.vue'
 import PageEditor from '../components/workspace/PageEditor.vue'
 
 const sidebarExpanded = ref(true)
-const selectedNotebookID = ref('personal')
-const selectedSectionID = ref('fyno-v2')
-const selectedPageID = ref(2)
+const selectedNotebookID = ref(null)
+const selectedSectionID = ref(null)
+const selectedPageID = ref(null)
 
 function selectNotebook(notebookID) {
   if (selectedNotebookID.value === notebookID) {
@@ -16,7 +16,7 @@ function selectNotebook(notebookID) {
   }
 
   selectedNotebookID.value = notebookID
-  selectedSectionID.value = ''
+  selectedSectionID.value = null
   selectedPageID.value = null
 }
 
@@ -31,16 +31,13 @@ function selectSection({ notebookID, sectionID }) {
   selectedPageID.value = null
 }
 
-function deleteNotebook({ notebookID, sectionIDs }) {
-  if (
-    selectedNotebookID.value !== notebookID &&
-    !sectionIDs.includes(selectedSectionID.value)
-  ) {
+function deleteNotebook(notebookID) {
+  if (selectedNotebookID.value !== notebookID) {
     return
   }
 
-  selectedNotebookID.value = ''
-  selectedSectionID.value = ''
+  selectedNotebookID.value = null
+  selectedSectionID.value = null
   selectedPageID.value = null
 }
 
@@ -50,7 +47,7 @@ function deleteSection({ notebookID, sectionID }) {
   }
 
   selectedNotebookID.value = notebookID
-  selectedSectionID.value = ''
+  selectedSectionID.value = null
   selectedPageID.value = null
 }
 
