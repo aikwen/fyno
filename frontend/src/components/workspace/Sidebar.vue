@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import ConfirmDialog from '../ConfirmDialog.vue'
 import ContextMenu from '../ContextMenu.vue'
 import Icon from '../Icon.vue'
 import { notebookApi } from '../../api/notebook.js'
@@ -55,6 +56,15 @@ const contextMenu = reactive({
   type: '',
   notebookID: null,
   sectionID: null,
+})
+const deleteDialog = reactive({
+  open: false,
+  type: '',
+  notebookID: null,
+  sectionID: null,
+  name: '',
+  loading: false,
+  error: '',
 })
 const editing = ref(null)
 const editName = ref('')
@@ -123,6 +133,17 @@ const contextMenuItems = computed(() => {
     { type: 'separator' },
     { type: 'colors', current: section.color, options: colors },
   ]
+})
+
+const deleteDialogTitle = computed(() => (
+  deleteDialog.type === 'notebook' ? '删除笔记本' : '删除分区'
+))
+
+const deleteDialogMessage = computed(() => {
+  if (deleteDialog.type === 'notebook') {
+    return `确定删除笔记本「${deleteDialog.name}」吗？其下所有分区和页面也会被删除。`
+  }
+  return `确定删除分区「${deleteDialog.name}」吗？其下所有页面也会被删除。`
 })
 
 function findNotebook(notebookID) {
@@ -295,6 +316,39 @@ function closeContextMenu() {
   contextMenu.open = false
 }
 
+function resetDeleteDialog() {
+  if (deleteDialog.loading) {
+    return
+  }
+
+  Object.assign(deleteDialog, {
+    open: false,
+    type: '',
+    notebookID: null,
+    sectionID: null,
+    name: '',
+    loading: false,
+    error: '',
+  })
+}
+
+function openDeleteDialog(type, notebook, section = null) {
+  if (deleteDialog.loading) {
+    return
+  }
+
+  closeContextMenu()
+  Object.assign(deleteDialog, {
+    open: true,
+    type,
+    notebookID: notebook.id,
+    sectionID: section?.id ?? null,
+    name: section?.name ?? notebook.name,
+    loading: false,
+    error: '',
+  })
+}
+
 function setRenameInput(element) {
   if (element) {
     renameInput.value = element
@@ -363,7 +417,7 @@ async function createSection(notebook) {
 
 async function deleteNotebook(notebook) {
   if (deletingNotebooks.has(notebook.id)) {
-    return
+    return { ok: false, error: '该笔记本正在删除，请稍候' }
   }
 
   deletingNotebooks.add(notebook.id)
@@ -380,8 +434,9 @@ async function deleteNotebook(notebook) {
       notebooks.value.splice(notebookIndex, 1)
       emit('delete-notebook', notebook.id)
     }
+    return { ok: true, error: '' }
   } catch (error) {
-    sidebarError.value = describeError('删除笔记本', error)
+    return { ok: false, error: describeError('删除笔记本', error) }
   } finally {
     deletingNotebooks.delete(notebook.id)
   }
@@ -389,7 +444,7 @@ async function deleteNotebook(notebook) {
 
 async function deleteSection(notebook, sectionID) {
   if (deletingSections.has(sectionID)) {
-    return
+    return { ok: false, error: '该分区正在删除，请稍候' }
   }
 
   deletingSections.add(sectionID)
@@ -407,10 +462,40 @@ async function deleteSection(notebook, sectionID) {
       currentNotebook.sections.splice(sectionIndex, 1)
       emit('delete-section', { notebookID: notebook.id, sectionID })
     }
+    return { ok: true, error: '' }
   } catch (error) {
-    sidebarError.value = describeError('删除分区', error)
+    return { ok: false, error: describeError('删除分区', error) }
   } finally {
     deletingSections.delete(sectionID)
+  }
+}
+
+async function confirmDelete() {
+  if (!deleteDialog.open || deleteDialog.loading) {
+    return
+  }
+
+  const type = deleteDialog.type
+  const notebookID = deleteDialog.notebookID
+  const sectionID = deleteDialog.sectionID
+  const notebook = findNotebook(notebookID)
+  const section = notebook?.sections.find((item) => item.id === sectionID)
+  if (!notebook || (type === 'section' && !section)) {
+    resetDeleteDialog()
+    return
+  }
+
+  deleteDialog.loading = true
+  deleteDialog.error = ''
+  const result = type === 'notebook'
+    ? await deleteNotebook(notebook)
+    : await deleteSection(notebook, sectionID)
+
+  deleteDialog.loading = false
+  if (result.ok) {
+    resetDeleteDialog()
+  } else {
+    deleteDialog.error = result.error
   }
 }
 
@@ -454,11 +539,14 @@ function handleContextAction(action) {
   }
 
   if (contextMenu.type === 'notebook') {
-    void deleteNotebook(notebook)
+    openDeleteDialog('notebook', notebook)
     return
   }
 
-  void deleteSection(notebook, contextMenu.sectionID)
+  const section = notebook.sections.find((item) => item.id === contextMenu.sectionID)
+  if (section) {
+    openDeleteDialog('section', notebook, section)
+  }
 }
 
 </script>
@@ -600,5 +688,15 @@ function handleContextAction(action) {
     :items="contextMenuItems"
     @select="handleContextAction"
     @close="closeContextMenu"
+  />
+  <ConfirmDialog
+    :open="deleteDialog.open"
+    :title="deleteDialogTitle"
+    :message="deleteDialogMessage"
+    confirm-text="删除"
+    :loading="deleteDialog.loading"
+    :error="deleteDialog.error"
+    @confirm="confirmDelete"
+    @cancel="resetDeleteDialog"
   />
 </template>

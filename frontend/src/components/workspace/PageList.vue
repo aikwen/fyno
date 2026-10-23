@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, reactive, ref, watch } from 'vue'
+import ConfirmDialog from '../ConfirmDialog.vue'
 import ContextMenu from '../ContextMenu.vue'
 import Icon from '../Icon.vue'
 import { pageApi } from '../../api/page.js'
@@ -31,6 +32,14 @@ const contextMenu = reactive({
   x: 0,
   y: 0,
   pageID: null,
+})
+const deleteDialog = reactive({
+  open: false,
+  pageID: null,
+  sectionID: null,
+  title: '',
+  loading: false,
+  error: '',
 })
 const contextMenuItems = [
   { type: 'action', id: 'rename', label: '重命名', icon: renameIcon },
@@ -119,6 +128,37 @@ function closeContextMenu() {
   contextMenu.open = false
 }
 
+function resetDeleteDialog() {
+  if (deleteDialog.loading) {
+    return
+  }
+
+  Object.assign(deleteDialog, {
+    open: false,
+    pageID: null,
+    sectionID: null,
+    title: '',
+    loading: false,
+    error: '',
+  })
+}
+
+function openDeleteDialog(page) {
+  if (deleteDialog.loading) {
+    return
+  }
+
+  closeContextMenu()
+  Object.assign(deleteDialog, {
+    open: true,
+    pageID: page.id,
+    sectionID: props.selectedSectionID,
+    title: page.title,
+    loading: false,
+    error: '',
+  })
+}
+
 function setRenameInput(element) {
   if (element) {
     renameInput.value = element
@@ -171,29 +211,56 @@ function cancelRename() {
   editingPageID.value = null
 }
 
-async function deletePage(page) {
-  const sectionID = props.selectedSectionID
-  if (deletingPages.has(page.id) || updatingPages.has(page.id)) {
-    return
+async function deletePage(target) {
+  if (deletingPages.has(target.pageID) || updatingPages.has(target.pageID)) {
+    return { ok: false, error: '该页面正在更新，请稍候' }
   }
 
-  deletingPages.add(page.id)
+  deletingPages.add(target.pageID)
   pageError.value = ''
   try {
-    await pageApi.remove(page.id)
-    if (props.selectedSectionID === sectionID) {
-      const pageIndex = pages.value.findIndex((item) => item.id === page.id)
+    await pageApi.remove(target.pageID)
+    if (props.selectedSectionID === target.sectionID) {
+      const pageIndex = pages.value.findIndex((item) => item.id === target.pageID)
       if (pageIndex !== -1) {
         pages.value.splice(pageIndex, 1)
       }
     }
-    emit('delete-page', page.id)
+    emit('delete-page', target.pageID)
+    return { ok: true, error: '' }
   } catch (error) {
-    if (props.selectedSectionID === sectionID) {
-      pageError.value = describeError('删除页面', error)
-    }
+    return { ok: false, error: describeError('删除页面', error) }
   } finally {
-    deletingPages.delete(page.id)
+    deletingPages.delete(target.pageID)
+  }
+}
+
+async function confirmDelete() {
+  if (!deleteDialog.open || deleteDialog.loading) {
+    return
+  }
+
+  const target = {
+    pageID: deleteDialog.pageID,
+    sectionID: deleteDialog.sectionID,
+  }
+
+  if (
+    props.selectedSectionID === target.sectionID &&
+    !pages.value.some((page) => page.id === target.pageID)
+  ) {
+    resetDeleteDialog()
+    return
+  }
+
+  deleteDialog.loading = true
+  deleteDialog.error = ''
+  const result = await deletePage(target)
+  deleteDialog.loading = false
+  if (result.ok) {
+    resetDeleteDialog()
+  } else {
+    deleteDialog.error = result.error
   }
 }
 
@@ -209,7 +276,7 @@ function handleContextAction(action) {
   }
 
   if (action.id === 'delete') {
-    void deletePage(page)
+    openDeleteDialog(page)
   }
 }
 </script>
@@ -277,5 +344,15 @@ function handleContextAction(action) {
     :items="contextMenuItems"
     @select="handleContextAction"
     @close="closeContextMenu"
+  />
+  <ConfirmDialog
+    :open="deleteDialog.open"
+    title="删除页面"
+    :message="`确定删除页面「${deleteDialog.title}」吗？`"
+    confirm-text="删除"
+    :loading="deleteDialog.loading"
+    :error="deleteDialog.error"
+    @confirm="confirmDelete"
+    @cancel="resetDeleteDialog"
   />
 </template>
