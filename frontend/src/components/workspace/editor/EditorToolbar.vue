@@ -196,11 +196,14 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="root"
-    class="sticky top-3 z-20 mx-auto mb-6 mt-4 flex w-fit max-w-full items-center rounded-2xl border border-slate-200/75 bg-white/85 p-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.10)] backdrop-blur-xl"
-    role="toolbar"
-    aria-label="正文格式工具栏"
+    class="sticky top-0 z-20 mb-6 mt-4 w-full bg-white py-3"
   >
-    <div class="editor-toolbar-scroll flex min-w-0 max-w-full items-center gap-0.5 overflow-x-auto">
+    <div
+      class="mx-auto flex w-fit max-w-full items-center rounded-2xl border border-slate-200/75 bg-white/85 p-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.10)] backdrop-blur-xl"
+      role="toolbar"
+      aria-label="正文格式工具栏"
+    >
+      <div class="editor-toolbar-scroll flex min-w-0 max-w-full items-center gap-0.5 overflow-x-auto">
       <button
         ref="headingButton"
         type="button"
@@ -261,6 +264,7 @@ onBeforeUnmount(() => {
       <button type="button" :class="[buttonClass, activeClass(isActive('link'))]" :disabled="toolbarDisabled" title="插入、修改或移除链接" aria-label="链接" @mousedown.prevent @click="editLink">
         <Icon :src="linkIcon" class="h-[18px] w-[18px]" />
       </button>
+      </div>
     </div>
   </div>
 
