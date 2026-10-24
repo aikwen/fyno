@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { Editor, EditorContent } from '@tiptap/vue-3'
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Highlight from '@tiptap/extension-highlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
@@ -14,13 +13,17 @@ import go from 'highlight.js/lib/languages/go'
 import java from 'highlight.js/lib/languages/java'
 import javascript from 'highlight.js/lib/languages/javascript'
 import json from 'highlight.js/lib/languages/json'
+import plaintext from 'highlight.js/lib/languages/plaintext'
 import python from 'highlight.js/lib/languages/python'
 import sql from 'highlight.js/lib/languages/sql'
 import typescript from 'highlight.js/lib/languages/typescript'
 import xml from 'highlight.js/lib/languages/xml'
+import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js'
 import { pageApi } from '../../api/page.js'
+import CodeBlock from './editor/CodeBlock.js'
 import EditorToolbar from './editor/EditorToolbar.vue'
 import EditorToc from './editor/EditorToc.vue'
+import LinkSelection from './editor/LinkSelection.js'
 import '../../assets/styles/editor.css'
 
 const props = defineProps({
@@ -44,6 +47,7 @@ const lowlight = createLowlight({
   java,
   javascript,
   json,
+  text: plaintext,
   python,
   sql,
   typescript,
@@ -54,6 +58,10 @@ lowlight.registerAlias('bash', ['sh', 'shell'])
 lowlight.registerAlias('javascript', ['js', 'jsx'])
 lowlight.registerAlias('typescript', ['ts', 'tsx'])
 lowlight.registerAlias('xml', ['html'])
+
+// CodeBlockLowlight normally auto-detects unknown languages. Fyno keeps the
+// user-entered label but renders those blocks as plain text instead.
+lowlight.highlightAuto = (value) => lowlight.highlight('text', value)
 
 const editor = shallowRef(null)
 const scrollContainer = ref(null)
@@ -300,6 +308,56 @@ function retrySave() {
   void queueSave(activeSession)
 }
 
+function openExternalLink(href) {
+  const externalHref = /^https?:\/\//i.test(href)
+    ? href
+    : `https://${href.replace(/^\/+/, '')}`
+
+  if (window.runtime?.BrowserOpenURL) {
+    BrowserOpenURL(externalHref)
+    return
+  }
+
+  window.open(externalHref, '_blank', 'noopener,noreferrer')
+}
+
+function handleEditorLinkClick(view, _position, event) {
+  if (event.button !== 0 || !(event.target instanceof Element)) {
+    return false
+  }
+
+  const link = event.target.closest('a[href]')
+  if (!link || !view.dom.contains(link)) {
+    return false
+  }
+
+  const href = link.getAttribute('href')?.trim()
+  if (!href) {
+    return false
+  }
+
+  event.preventDefault()
+  openExternalLink(href)
+  return true
+}
+
+function focusEditorEnd() {
+  const currentEditor = editor.value
+  if (!currentEditor?.isEditable || loading.value || loadError.value) {
+    return
+  }
+
+  const lastNode = currentEditor.state.doc.lastChild
+  const endsWithEmptyParagraph = lastNode?.type.name === 'paragraph' && lastNode.content.size === 0
+  const chain = currentEditor.chain()
+
+  if (!endsWithEmptyParagraph) {
+    chain.insertContentAt(currentEditor.state.doc.content.size, { type: 'paragraph' })
+  }
+
+  chain.focus('end').run()
+}
+
 onMounted(() => {
   editor.value = new Editor({
     extensions: [
@@ -312,10 +370,11 @@ onMounted(() => {
           linkOnPaste: true,
         },
       }),
-      CodeBlockLowlight.configure({ lowlight }),
+      CodeBlock.configure({ lowlight, defaultLanguage: 'text' }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Highlight,
+      Highlight.configure({ multicolor: true }),
+      LinkSelection,
       Placeholder.configure({ placeholder: '开始输入正文…' }),
     ],
     content: EMPTY_DOCUMENT,
@@ -325,6 +384,7 @@ onMounted(() => {
         class: 'fyno-page-content',
         'aria-label': '页面正文',
       },
+      handleClick: handleEditorLinkClick,
     },
     onUpdate: handleEditorUpdate,
   })
@@ -427,7 +487,9 @@ onBeforeUnmount(() => {
             <EditorContent :editor="editor" />
             <div
               aria-hidden="true"
-              class="h-[calc(100vh-9rem)] min-h-96"
+              class="h-[calc(100vh-9rem)] min-h-96 cursor-text"
+              @mousedown.prevent
+              @click="focusEditorEnd"
             />
           </div>
           <EditorToc

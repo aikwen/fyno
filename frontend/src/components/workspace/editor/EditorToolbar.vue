@@ -17,6 +17,8 @@ import codeIcon from '../../../assets/icon/editor/code.svg'
 import underlineIcon from '../../../assets/icon/editor/underline.svg'
 import highlightIcon from '../../../assets/icon/editor/highlighter.svg'
 import linkIcon from '../../../assets/icon/editor/link.svg'
+import deleteIcon from '../../../assets/icon/delete.svg'
+import { clearLinkSelection, showLinkSelection } from './LinkSelection.js'
 
 const props = defineProps({
   editor: {
@@ -48,14 +50,34 @@ const toolbarItems = [
   { id: 'link', title: '插入、修改或移除链接', icon: linkIcon, activeName: 'link' },
 ]
 
+const highlightColors = [
+  { name: '黄色', value: '#fef3c7' },
+  { name: '绿色', value: '#dcfce7' },
+  { name: '蓝色', value: '#dbeafe' },
+  { name: '紫色', value: '#ede9fe' },
+  { name: '粉色', value: '#fce7f3' },
+  { name: '红色', value: '#fee2e2' },
+]
+
 const root = ref(null)
 const measurement = ref(null)
 const headingButton = ref(null)
 const headingMenu = ref(null)
 const headingMenuOpen = ref(false)
+const highlightButton = ref(null)
+const highlightMenu = ref(null)
+const highlightMenuOpen = ref(false)
+const linkButton = ref(null)
+const linkMenu = ref(null)
+const linkInput = ref(null)
+const linkMenuOpen = ref(false)
+const linkDraft = ref('')
+const linkError = ref('')
 const editorVersion = ref(0)
 const visibleCount = ref(toolbarItems.length)
 const menuPosition = reactive({ left: 0, top: 0 })
+const highlightMenuPosition = reactive({ left: 0, top: 0 })
+const linkMenuPosition = reactive({ left: 0, top: 0 })
 
 let resizeObserver = null
 let resizeFrame = 0
@@ -101,6 +123,18 @@ function setHeadingButton(element) {
   }
 }
 
+function setHighlightButton(element) {
+  if (element) {
+    highlightButton.value = element
+  }
+}
+
+function setLinkButton(element) {
+  if (element) {
+    linkButton.value = element
+  }
+}
+
 function execute(item) {
   if (toolbarDisabled.value || item.disabled) {
     return
@@ -117,12 +151,14 @@ function execute(item) {
     strike: () => props.editor.chain().focus().toggleStrike().run(),
     code: () => props.editor.chain().focus().toggleCode().run(),
     underline: () => props.editor.chain().focus().toggleUnderline().run(),
-    highlight: () => props.editor.chain().focus().toggleHighlight().run(),
-    link: editLink,
   }
 
   if (item.id === 'heading') {
     toggleHeadingMenu()
+  } else if (item.id === 'highlight') {
+    toggleHighlightMenu()
+  } else if (item.id === 'link') {
+    toggleLinkMenu()
   } else {
     commands[item.id]?.()
   }
@@ -186,15 +222,14 @@ function scheduleToolbarMeasurement() {
   resizeFrame = window.requestAnimationFrame(recalculateVisibleItems)
 }
 
-function updateHeadingMenuPosition() {
-  const rect = headingButton.value?.getBoundingClientRect()
+function updateMenuPosition(button, position, menuWidth) {
+  const rect = button?.getBoundingClientRect()
   if (!rect) {
     return
   }
 
-  const menuWidth = 148
-  menuPosition.left = Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8))
-  menuPosition.top = rect.bottom + 8
+  position.left = Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8))
+  position.top = rect.bottom + 8
 }
 
 function toggleHeadingMenu() {
@@ -204,8 +239,62 @@ function toggleHeadingMenu() {
 
   headingMenuOpen.value = !headingMenuOpen.value
   if (headingMenuOpen.value) {
-    updateHeadingMenuPosition()
+    highlightMenuOpen.value = false
+    linkMenuOpen.value = false
+    updateMenuPosition(headingButton.value, menuPosition, 148)
   }
+}
+
+function toggleHighlightMenu() {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  highlightMenuOpen.value = !highlightMenuOpen.value
+  if (highlightMenuOpen.value) {
+    headingMenuOpen.value = false
+    linkMenuOpen.value = false
+    updateMenuPosition(highlightButton.value, highlightMenuPosition, 260)
+  }
+}
+
+function setHighlightColor(color) {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  props.editor.chain().focus().setHighlight({ color }).run()
+  highlightMenuOpen.value = false
+}
+
+function clearHighlight() {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  props.editor.chain().focus().unsetHighlight().run()
+  highlightMenuOpen.value = false
+}
+
+async function toggleLinkMenu() {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  linkMenuOpen.value = !linkMenuOpen.value
+  if (!linkMenuOpen.value) {
+    return
+  }
+
+  showLinkSelection(props.editor)
+  headingMenuOpen.value = false
+  highlightMenuOpen.value = false
+  linkDraft.value = props.editor.getAttributes('link').href ?? ''
+  linkError.value = ''
+  updateMenuPosition(linkButton.value, linkMenuPosition, 300)
+  await nextTick()
+  linkInput.value?.focus({ preventScroll: true })
+  linkInput.value?.select()
 }
 
 function setTextStyle(level = null) {
@@ -223,45 +312,42 @@ function setTextStyle(level = null) {
 }
 
 function normalizeLink(value) {
-  const href = value.trim()
-  if (!href) {
-    return ''
-  }
-  if (/^(https?:\/\/|mailto:|tel:|#|\/(?!\/)|\.{1,2}\/)/i.test(href)) {
-    return href
-  }
-  if (/^[\w.-]+\.[a-z]{2,}(?:[/?#].*)?$/i.test(href)) {
-    return `https://${href}`
-  }
-  return null
+  return value.trim()
 }
 
-function editLink() {
+function applyLinkDraft() {
   if (toolbarDisabled.value) {
     return
   }
 
-  const currentHref = props.editor.getAttributes('link').href ?? ''
-  const value = window.prompt('输入链接地址；留空可移除链接', currentHref)
-  if (value === null) {
-    return
-  }
-
-  const href = normalizeLink(value)
-  if (href === null) {
-    window.alert('请输入有效的 http、https、mailto、tel 或相对链接。')
-    return
-  }
-
-  const chain = props.editor.chain().focus()
+  const href = normalizeLink(linkDraft.value)
   if (!href) {
-    chain.extendMarkRange('link').unsetLink().run()
-  } else {
-    if (isActive('link')) {
-      chain.extendMarkRange('link')
-    }
-    chain.setLink({ href }).run()
+    linkError.value = ''
+    return
   }
+
+  if (href && props.editor.state.selection.empty && !isActive('link')) {
+    linkError.value = '请先选择要添加链接的文字'
+    return
+  }
+
+  const chain = props.editor.chain()
+  if (isActive('link')) {
+    chain.extendMarkRange('link')
+  }
+  chain.setLink({ href }).run()
+  linkError.value = ''
+}
+
+function removeLink() {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  props.editor.chain().focus().extendMarkRange('link').unsetLink().run()
+  linkDraft.value = ''
+  linkMenuOpen.value = false
+  linkError.value = ''
 }
 
 function handlePointerDown(event) {
@@ -272,27 +358,66 @@ function handlePointerDown(event) {
   ) {
     headingMenuOpen.value = false
   }
+  if (
+    highlightMenuOpen.value &&
+    !root.value?.contains(event.target) &&
+    !highlightMenu.value?.contains(event.target)
+  ) {
+    highlightMenuOpen.value = false
+  }
+  if (
+    linkMenuOpen.value &&
+    !root.value?.contains(event.target) &&
+    !linkMenu.value?.contains(event.target)
+  ) {
+    linkMenuOpen.value = false
+    linkError.value = ''
+  }
 }
 
 function handleKeyDown(event) {
   if (event.key === 'Escape') {
     headingMenuOpen.value = false
+    highlightMenuOpen.value = false
+    linkMenuOpen.value = false
+    linkError.value = ''
   }
 }
 
 function closeHeadingMenuOnScroll() {
   headingMenuOpen.value = false
+  highlightMenuOpen.value = false
+  if (document.activeElement !== linkInput.value) {
+    linkMenuOpen.value = false
+    linkError.value = ''
+  }
 }
 
 watch(() => props.editor, bindEditor, { immediate: true })
+watch(linkMenuOpen, (open) => {
+  if (!open) {
+    clearLinkSelection(props.editor)
+  }
+})
 watch(toolbarDisabled, (disabled) => {
   if (disabled) {
     headingMenuOpen.value = false
+    highlightMenuOpen.value = false
+    linkMenuOpen.value = false
+    linkError.value = ''
   }
 })
 watch(visibleCount, (count) => {
   if (count === 0) {
     headingMenuOpen.value = false
+  }
+  const highlightIndex = toolbarItems.findIndex(item => item.id === 'highlight')
+  if (highlightIndex >= count) {
+    highlightMenuOpen.value = false
+  }
+  const linkIndex = toolbarItems.findIndex(item => item.id === 'link')
+  if (linkIndex >= count) {
+    linkMenuOpen.value = false
   }
 })
 
@@ -308,6 +433,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  clearLinkSelection(props.editor)
   props.editor?.off('transaction', refreshState)
   props.editor?.off('selectionUpdate', refreshState)
   resizeObserver?.disconnect()
@@ -338,13 +464,13 @@ onBeforeUnmount(() => {
         />
         <button
           v-else-if="item.type !== 'separator' && isVisible(index)"
-          :ref="item.id === 'heading' ? setHeadingButton : undefined"
+          :ref="item.id === 'heading' ? setHeadingButton : item.id === 'highlight' ? setHighlightButton : item.id === 'link' ? setLinkButton : undefined"
           type="button"
           :class="[buttonClass, activeClass(isItemActive(item))]"
           :disabled="toolbarDisabled || item.disabled"
           :title="item.title"
           :aria-label="item.title"
-          :aria-expanded="item.id === 'heading' ? headingMenuOpen : undefined"
+          :aria-expanded="item.id === 'heading' ? headingMenuOpen : item.id === 'highlight' ? highlightMenuOpen : item.id === 'link' ? linkMenuOpen : undefined"
           @mousedown.prevent
           @click="execute(item)"
         >
@@ -386,6 +512,79 @@ onBeforeUnmount(() => {
     >
       <button type="button" role="menuitem" class="flex h-8 w-full items-center rounded-lg px-3 text-left hover:bg-slate-100" :class="activeClass(isActive('paragraph'))" @mousedown.prevent @click="setTextStyle()">正文</button>
       <button v-for="level in [1, 2, 3, 4, 5]" :key="level" type="button" role="menuitem" class="flex h-8 w-full items-center rounded-lg px-3 text-left hover:bg-slate-100" :class="activeClass(isActive('heading', { level }))" @mousedown.prevent @click="setTextStyle(level)">H{{ level }}</button>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="highlightMenuOpen"
+      ref="highlightMenu"
+      role="menu"
+      aria-label="高亮颜色"
+      class="fixed z-50 flex w-max max-w-[calc(100vw-16px)] items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_10px_30px_rgba(15,23,42,0.13)] backdrop-blur-xl"
+      :style="{ left: `${highlightMenuPosition.left}px`, top: `${highlightMenuPosition.top}px` }"
+    >
+      <button
+        v-for="color in highlightColors"
+        :key="color.value"
+        type="button"
+        role="menuitem"
+        class="h-7 w-7 shrink-0 cursor-pointer rounded-full border border-slate-300 transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+        :class="isActive('highlight', { color: color.value }) ? 'ring-2 ring-violet-500 ring-offset-1' : ''"
+        :style="{ backgroundColor: color.value }"
+        :title="`${color.name}高亮`"
+        :aria-label="`${color.name}高亮`"
+        @mousedown.prevent
+        @click="setHighlightColor(color.value)"
+      />
+      <span aria-hidden="true" class="mx-0.5 h-5 w-px bg-slate-200" />
+      <button
+        type="button"
+        role="menuitem"
+        class="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-300 bg-white text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+        title="清除高亮"
+        aria-label="清除高亮"
+        @mousedown.prevent
+        @click="clearHighlight"
+      >×</button>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="linkMenuOpen"
+      ref="linkMenu"
+      role="dialog"
+      aria-label="编辑链接"
+      class="fixed z-50 w-[300px] max-w-[calc(100vw-16px)] rounded-xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_10px_30px_rgba(15,23,42,0.13)] backdrop-blur-xl"
+      :style="{ left: `${linkMenuPosition.left}px`, top: `${linkMenuPosition.top}px` }"
+    >
+      <div class="flex items-center gap-1.5">
+        <input
+          ref="linkInput"
+          v-model="linkDraft"
+          type="text"
+          class="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          placeholder="输入链接，编辑后自动应用"
+          aria-label="链接地址"
+          @input="applyLinkDraft"
+          @keydown.enter.prevent="linkMenuOpen = false"
+          @keydown.escape.prevent="linkMenuOpen = false"
+        >
+        <button
+          type="button"
+          class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+          title="删除链接"
+          aria-label="删除链接"
+          @mousedown.prevent
+          @click="removeLink"
+        >
+          <Icon :src="deleteIcon" class="h-4 w-4" />
+        </button>
+      </div>
+      <p v-if="linkError" class="mt-1.5 px-0.5 text-xs text-red-600">
+        {{ linkError }}
+      </p>
     </div>
   </Teleport>
 </template>

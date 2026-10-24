@@ -139,7 +139,7 @@ onBeforeUnmount(() => {
         v-for="item in items"
         :key="item.key"
         type="button"
-        class="mb-0.5 block h-8 w-full truncate border-l-2 pr-2 text-left text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+        class="mb-0.5 block h-8 w-full cursor-pointer truncate border-l-2 pr-2 text-left text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
         :class="activePosition === item.position
           ? 'border-violet-500 bg-violet-50/70 text-violet-700'
           : 'border-transparent text-slate-500 hover:bg-slate-100/80 hover:text-slate-700'"
