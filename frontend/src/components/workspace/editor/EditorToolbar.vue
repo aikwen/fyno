@@ -1,6 +1,7 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useSlots, watch } from 'vue'
 import Icon from '../../Icon.vue'
+import EditorMathPopover from './EditorMathPopover.vue'
 import headingIcon from '../../../assets/icon/editor/heading.svg'
 import chevronDownIcon from '../../../assets/icon/editor/chevron-down.svg'
 import orderedListIcon from '../../../assets/icon/editor/list-ordered.svg'
@@ -17,6 +18,10 @@ import codeIcon from '../../../assets/icon/editor/code.svg'
 import underlineIcon from '../../../assets/icon/editor/underline.svg'
 import highlightIcon from '../../../assets/icon/editor/highlighter.svg'
 import linkIcon from '../../../assets/icon/editor/link.svg'
+import noteIcon from '../../../assets/icon/editor/admonition-note.svg'
+import tipIcon from '../../../assets/icon/editor/admonition-tip.svg'
+import warningIcon from '../../../assets/icon/editor/admonition-warning.svg'
+import dangerIcon from '../../../assets/icon/editor/admonition-danger.svg'
 import { clearLinkSelection, showLinkSelection } from './LinkSelection.js'
 
 const props = defineProps({
@@ -29,6 +34,7 @@ const props = defineProps({
     default: false,
   },
 })
+const slots = useSlots()
 
 const toolbarItems = [
   { id: 'heading', title: '段落与标题', icon: headingIcon, activeName: 'heading' },
@@ -37,8 +43,8 @@ const toolbarItems = [
   { id: 'task-list', title: '任务列表', icon: taskListIcon, activeName: 'taskList' },
   { id: 'blockquote', title: '引用块', icon: quoteIcon, activeName: 'blockquote' },
   { id: 'code-block', title: '代码块', icon: codeBlockIcon, activeName: 'codeBlock' },
-  { id: 'admonition', title: 'Admonition 提示块将在后续版本支持', icon: admonitionIcon, disabled: true },
-  { id: 'math', title: '数学公式将在后续版本支持', icon: mathIcon, disabled: true },
+  { id: 'admonition', title: '插入提示块', icon: admonitionIcon, activeName: 'admonition' },
+  { id: 'math', title: '插入或编辑数学公式', icon: mathIcon },
   { id: 'separator', type: 'separator' },
   { id: 'bold', title: '加粗', icon: boldIcon, activeName: 'bold' },
   { id: 'italic', title: '斜体', icon: italicIcon, activeName: 'italic' },
@@ -58,6 +64,13 @@ const highlightColors = [
   { name: '红色', value: '#fee2e2' },
 ]
 
+const admonitionVariants = [
+  { id: 'note', label: 'Note', description: '补充说明', icon: noteIcon },
+  { id: 'tip', label: 'Tip', description: '建议与技巧', icon: tipIcon },
+  { id: 'warning', label: 'Warning', description: '需要注意', icon: warningIcon },
+  { id: 'danger', label: 'Danger', description: '风险与错误', icon: dangerIcon },
+]
+
 const root = ref(null)
 const measurement = ref(null)
 const headingButton = ref(null)
@@ -72,11 +85,18 @@ const linkInput = ref(null)
 const linkMenuOpen = ref(false)
 const linkDraft = ref('')
 const linkError = ref('')
+const admonitionButton = ref(null)
+const admonitionMenu = ref(null)
+const admonitionMenuOpen = ref(false)
+const admonitionError = ref('')
+const mathButton = ref(null)
+const mathPopover = ref(null)
 const editorVersion = ref(0)
 const visibleCount = ref(toolbarItems.length)
 const menuPosition = reactive({ left: 0, top: 0 })
 const highlightMenuPosition = reactive({ left: 0, top: 0 })
 const linkMenuPosition = reactive({ left: 0, top: 0 })
+const admonitionMenuPosition = reactive({ left: 0, top: 0 })
 
 let resizeObserver = null
 let resizeFrame = 0
@@ -85,6 +105,7 @@ const toolbarDisabled = computed(() => (
   props.disabled || !props.editor || !props.editor.isEditable
 ))
 const hasHiddenItems = computed(() => visibleCount.value < toolbarItems.length)
+const hasStatus = computed(() => Boolean(slots.status))
 const buttonClass = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100/90 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 disabled:pointer-events-none disabled:text-slate-300'
 
 function refreshState() {
@@ -105,6 +126,9 @@ function isActive(name, attributes) {
 }
 
 function isItemActive(item) {
+  if (item.id === 'math') {
+    return isActive('inlineMath') || isActive('blockMath')
+  }
   return item.activeName ? isActive(item.activeName) : false
 }
 
@@ -116,22 +140,30 @@ function isVisible(index) {
   return index < visibleCount.value
 }
 
-function setHeadingButton(element) {
-  if (element) {
-    headingButton.value = element
+function setToolbarButton(item, element) {
+  if (!element) {
+    return
+  }
+
+  const targets = {
+    heading: headingButton,
+    highlight: highlightButton,
+    link: linkButton,
+    admonition: admonitionButton,
+    math: mathButton,
+  }
+  if (targets[item.id]) {
+    targets[item.id].value = element
   }
 }
 
-function setHighlightButton(element) {
-  if (element) {
-    highlightButton.value = element
-  }
-}
-
-function setLinkButton(element) {
-  if (element) {
-    linkButton.value = element
-  }
+function isMenuExpanded(item) {
+  return {
+    heading: headingMenuOpen.value,
+    highlight: highlightMenuOpen.value,
+    link: linkMenuOpen.value,
+    admonition: admonitionMenuOpen.value,
+  }[item.id]
 }
 
 function execute(item) {
@@ -154,6 +186,10 @@ function execute(item) {
 
   if (item.id === 'heading') {
     toggleHeadingMenu()
+  } else if (item.id === 'admonition') {
+    toggleAdmonitionMenu()
+  } else if (item.id === 'math') {
+    openMathPopover()
   } else if (item.id === 'highlight') {
     toggleHighlightMenu()
   } else if (item.id === 'link') {
@@ -161,6 +197,14 @@ function execute(item) {
   } else {
     commands[item.id]?.()
   }
+}
+
+function closeTransientPanels(except = '') {
+  if (except !== 'heading') headingMenuOpen.value = false
+  if (except !== 'highlight') highlightMenuOpen.value = false
+  if (except !== 'link') linkMenuOpen.value = false
+  if (except !== 'admonition') admonitionMenuOpen.value = false
+  if (except !== 'math') mathPopover.value?.close()
 }
 
 function itemOuterWidth(element) {
@@ -171,7 +215,8 @@ function itemOuterWidth(element) {
 }
 
 function recalculateVisibleItems() {
-  const availableWidth = root.value?.clientWidth ?? 0
+  const statusSpace = hasStatus.value ? 84 : 0
+  const availableWidth = Math.max(0, (root.value?.clientWidth ?? 0) - statusSpace)
   const measureElement = measurement.value
   if (!availableWidth || !measureElement) {
     return
@@ -238,8 +283,7 @@ function toggleHeadingMenu() {
 
   headingMenuOpen.value = !headingMenuOpen.value
   if (headingMenuOpen.value) {
-    highlightMenuOpen.value = false
-    linkMenuOpen.value = false
+    closeTransientPanels('heading')
     updateMenuPosition(headingButton.value, menuPosition, 148)
   }
 }
@@ -251,8 +295,7 @@ function toggleHighlightMenu() {
 
   highlightMenuOpen.value = !highlightMenuOpen.value
   if (highlightMenuOpen.value) {
-    headingMenuOpen.value = false
-    linkMenuOpen.value = false
+    closeTransientPanels('highlight')
     updateMenuPosition(highlightButton.value, highlightMenuPosition, 260)
   }
 }
@@ -286,14 +329,85 @@ async function toggleLinkMenu() {
   }
 
   showLinkSelection(props.editor)
-  headingMenuOpen.value = false
-  highlightMenuOpen.value = false
+  closeTransientPanels('link')
   linkDraft.value = props.editor.getAttributes('link').href ?? ''
   linkError.value = ''
   updateMenuPosition(linkButton.value, linkMenuPosition, 300)
   await nextTick()
   linkInput.value?.focus({ preventScroll: true })
   linkInput.value?.select()
+}
+
+function selectionInsideNode(typeName) {
+  const selection = props.editor?.state.selection
+  if (!selection) {
+    return false
+  }
+
+  return [selection.$from, selection.$to].some(($position) => {
+    for (let depth = $position.depth; depth > 0; depth -= 1) {
+      if ($position.node(depth).type.name === typeName) {
+        return true
+      }
+    }
+    return false
+  })
+}
+
+function toggleAdmonitionMenu() {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  admonitionMenuOpen.value = !admonitionMenuOpen.value
+  if (admonitionMenuOpen.value) {
+    closeTransientPanels('admonition')
+    admonitionError.value = selectionInsideNode('admonition')
+      ? '提示块中不能再嵌套提示块'
+      : props.editor.state.selection.$from.parent.type.spec.code
+        ? '代码块中不能插入提示块'
+        : ''
+    updateMenuPosition(admonitionButton.value, admonitionMenuPosition, 252)
+  }
+}
+
+function insertAdmonition(variant) {
+  if (toolbarDisabled.value || admonitionError.value) {
+    return
+  }
+
+  try {
+    const inserted = props.editor.chain().focus().insertAdmonition({
+      variant: variant.id,
+      title: variant.label,
+    }).run()
+    if (!inserted) {
+      admonitionError.value = '当前位置无法插入提示块'
+      return
+    }
+    admonitionMenuOpen.value = false
+  } catch (error) {
+    admonitionError.value = error instanceof Error ? error.message : '提示块插入失败'
+  }
+}
+
+function openMathPopover() {
+  if (toolbarDisabled.value) {
+    return
+  }
+
+  const rect = mathButton.value?.getBoundingClientRect()
+  closeTransientPanels('math')
+  mathPopover.value?.openInsert({
+    mode: 'inline',
+    position: props.editor.state.selection.to,
+    rect,
+  })
+}
+
+function openMathEditor({ kind, latex, position, rect }) {
+  closeTransientPanels('math')
+  mathPopover.value?.openEdit({ kind, latex, position, rect })
 }
 
 function setTextStyle(level = null) {
@@ -347,6 +461,14 @@ function handlePointerDown(event) {
     headingMenuOpen.value = false
   }
   if (
+    admonitionMenuOpen.value &&
+    !root.value?.contains(event.target) &&
+    !admonitionMenu.value?.contains(event.target)
+  ) {
+    admonitionMenuOpen.value = false
+    admonitionError.value = ''
+  }
+  if (
     highlightMenuOpen.value &&
     !root.value?.contains(event.target) &&
     !highlightMenu.value?.contains(event.target)
@@ -369,12 +491,17 @@ function handleKeyDown(event) {
     highlightMenuOpen.value = false
     linkMenuOpen.value = false
     linkError.value = ''
+    admonitionMenuOpen.value = false
+    admonitionError.value = ''
+    mathPopover.value?.close()
   }
 }
 
 function closeHeadingMenuOnScroll() {
   headingMenuOpen.value = false
   highlightMenuOpen.value = false
+  admonitionMenuOpen.value = false
+  admonitionError.value = ''
   if (document.activeElement !== linkInput.value) {
     linkMenuOpen.value = false
     linkError.value = ''
@@ -393,6 +520,9 @@ watch(toolbarDisabled, (disabled) => {
     highlightMenuOpen.value = false
     linkMenuOpen.value = false
     linkError.value = ''
+    admonitionMenuOpen.value = false
+    admonitionError.value = ''
+    mathPopover.value?.close()
   }
 })
 watch(visibleCount, (count) => {
@@ -406,6 +536,14 @@ watch(visibleCount, (count) => {
   const linkIndex = toolbarItems.findIndex(item => item.id === 'link')
   if (linkIndex >= count) {
     linkMenuOpen.value = false
+  }
+  const admonitionIndex = toolbarItems.findIndex(item => item.id === 'admonition')
+  if (admonitionIndex >= count) {
+    admonitionMenuOpen.value = false
+  }
+  const mathIndex = toolbarItems.findIndex(item => item.id === 'math')
+  if (mathIndex >= count) {
+    mathPopover.value?.close()
   }
 })
 
@@ -431,16 +569,19 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', closeHeadingMenuOnScroll)
   document.removeEventListener('scroll', closeHeadingMenuOnScroll, true)
 })
+
+defineExpose({ openMathEditor })
 </script>
 
 <template>
   <div
     ref="root"
     data-editor-toolbar-dock
-    class="sticky top-0 z-20 mb-6 mt-4 w-full bg-white py-3"
+    class="sticky top-0 z-20 mb-6 w-full bg-white py-3"
   >
     <div
-      class="mx-auto flex w-fit max-w-full items-center gap-0.5 overflow-hidden rounded-2xl border border-slate-200/75 bg-white/85 p-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.10)] backdrop-blur-xl"
+      class="mx-auto flex w-fit items-center gap-0.5 overflow-hidden rounded-2xl border border-slate-200/75 bg-white/85 p-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.10)] backdrop-blur-xl"
+      :class="hasStatus ? 'max-w-[calc(100%-5.25rem)]' : 'max-w-full'"
       role="toolbar"
       aria-label="正文格式工具栏"
     >
@@ -452,13 +593,13 @@ onBeforeUnmount(() => {
         />
         <button
           v-else-if="item.type !== 'separator' && isVisible(index)"
-          :ref="item.id === 'heading' ? setHeadingButton : item.id === 'highlight' ? setHighlightButton : item.id === 'link' ? setLinkButton : undefined"
+          :ref="element => setToolbarButton(item, element)"
           type="button"
           :class="[buttonClass, activeClass(isItemActive(item))]"
           :disabled="toolbarDisabled || item.disabled"
           :title="item.title"
           :aria-label="item.title"
-          :aria-expanded="item.id === 'heading' ? headingMenuOpen : item.id === 'highlight' ? highlightMenuOpen : item.id === 'link' ? linkMenuOpen : undefined"
+          :aria-expanded="isMenuExpanded(item)"
           @mousedown.prevent
           @click="execute(item)"
         >
@@ -473,6 +614,13 @@ onBeforeUnmount(() => {
         title="部分工具因空间不足而隐藏"
         aria-label="部分工具因空间不足而隐藏"
       >···</span>
+    </div>
+
+    <div
+      v-if="hasStatus"
+      class="absolute right-1 top-1/2 -translate-y-1/2"
+    >
+      <slot name="status" />
     </div>
 
     <div
@@ -500,6 +648,39 @@ onBeforeUnmount(() => {
     >
       <button type="button" role="menuitem" class="flex h-8 w-full items-center rounded-lg px-3 text-left hover:bg-slate-100" :class="activeClass(isActive('paragraph'))" @mousedown.prevent @click="setTextStyle()">正文</button>
       <button v-for="level in [1, 2, 3, 4, 5]" :key="level" type="button" role="menuitem" class="flex h-8 w-full items-center rounded-lg px-3 text-left hover:bg-slate-100" :class="activeClass(isActive('heading', { level }))" @mousedown.prevent @click="setTextStyle(level)">H{{ level }}</button>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="admonitionMenuOpen"
+      ref="admonitionMenu"
+      role="menu"
+      aria-label="提示块类型"
+      class="fixed z-50 w-[252px] max-w-[calc(100vw-16px)] rounded-xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_10px_30px_rgba(15,23,42,0.13)] backdrop-blur-xl"
+      :style="{ left: `${admonitionMenuPosition.left}px`, top: `${admonitionMenuPosition.top}px` }"
+    >
+      <div class="grid grid-cols-2 gap-1">
+        <button
+          v-for="variant in admonitionVariants"
+          :key="variant.id"
+          type="button"
+          role="menuitem"
+          class="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+          :disabled="Boolean(admonitionError)"
+          @mousedown.prevent
+          @click="insertAdmonition(variant)"
+        >
+          <Icon :src="variant.icon" class="h-4 w-4 shrink-0" />
+          <span class="min-w-0">
+            <span class="block text-xs font-medium">{{ variant.label }}</span>
+            <span class="block truncate text-[10px] text-slate-400">{{ variant.description }}</span>
+          </span>
+        </button>
+      </div>
+      <p v-if="admonitionError" class="mt-1.5 border-t border-slate-100 px-1 pt-2 text-xs text-red-600">
+        {{ admonitionError }}
+      </p>
     </div>
   </Teleport>
 
@@ -574,4 +755,6 @@ onBeforeUnmount(() => {
       </p>
     </div>
   </Teleport>
+
+  <EditorMathPopover ref="mathPopover" :editor="editor" />
 </template>

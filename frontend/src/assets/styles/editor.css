@@ -132,6 +132,191 @@
   margin-bottom: 0;
 }
 
+.fyno-admonition {
+  margin: 1.1em 0;
+  min-width: 0;
+  border: 2px solid rgba(15, 23, 42, 0.62);
+  border-radius: 0.65rem;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.fyno-admonition__header {
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  gap: 0.75rem;
+  border-bottom: 0;
+  background: transparent;
+  padding: 1.15rem 1.35rem 0.35rem;
+  color: #18181b;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.fyno-admonition__heading {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 700;
+}
+
+.fyno-admonition__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+  letter-spacing: -0.01em;
+}
+
+.fyno-admonition__title-input {
+  width: min(24rem, 100%);
+  min-width: 6rem;
+  height: 30px;
+  border: 0;
+  border-radius: 0.3rem;
+  background: #f3f4f6;
+  padding: 0 0.45rem;
+  color: #18181b;
+  font: inherit;
+  font-weight: 700;
+  outline: 2px solid rgba(15, 23, 42, 0.35);
+  outline-offset: 0;
+}
+
+.fyno-admonition__type-control {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.fyno-admonition__type-button {
+  display: inline-flex;
+  height: 26px;
+  align-items: center;
+  gap: 0.2rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0.3rem;
+  color: #6b7280;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.fyno-admonition__type-button:hover,
+.fyno-admonition__type-button[aria-expanded='true'] {
+  background: #eaeef2;
+  color: #24292f;
+  opacity: 1;
+}
+
+.fyno-admonition__type-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 132px;
+  border: 1px solid rgba(208, 215, 222, 0.9);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 0.3rem;
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.12);
+  color: #57606a;
+  backdrop-filter: blur(12px);
+}
+
+.fyno-admonition__type-option {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  align-items: center;
+  gap: 0.45rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  padding: 0 0.5rem;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fyno-admonition__type-option:hover,
+.fyno-admonition__type-option.is-active {
+  background: #f3f4f6;
+  color: #24292f;
+}
+
+.fyno-admonition__content {
+  min-width: 0;
+  padding: 0.35rem 1.35rem 1.15rem;
+}
+
+.fyno-admonition__content > *:first-child {
+  margin-top: 0;
+}
+
+.fyno-admonition__content > *:last-child {
+  margin-bottom: 0;
+}
+
+.fyno-admonition__content .fyno-code-block {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.fyno-page-content .tiptap-mathematics-render {
+  max-width: 100%;
+  color: #24292f;
+}
+
+.fyno-page-content .tiptap-mathematics-render--editable {
+  cursor: pointer;
+}
+
+.fyno-page-content span.tiptap-mathematics-render {
+  display: inline-block;
+  margin: 0 0.12em;
+  vertical-align: -0.08em;
+}
+
+.fyno-page-content div.tiptap-mathematics-render {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  padding: 0.45rem 0;
+  text-align: center;
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+.fyno-page-content div.tiptap-mathematics-render::-webkit-scrollbar {
+  height: 4px;
+}
+
+.fyno-page-content div.tiptap-mathematics-render::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fyno-page-content div.tiptap-mathematics-render::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.fyno-page-content .tiptap-mathematics-render--editable:hover {
+  background: rgba(139, 92, 246, 0.06);
+  outline: 1px solid rgba(139, 92, 246, 0.2);
+  outline-offset: 2px;
+}
+
 .fyno-code-block {
   margin: 1em 0;
   min-width: 0;

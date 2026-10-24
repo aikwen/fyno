@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { Editor, EditorContent } from '@tiptap/vue-3'
 import Highlight from '@tiptap/extension-highlight'
+import Mathematics from '@tiptap/extension-mathematics'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
@@ -21,9 +22,11 @@ import xml from 'highlight.js/lib/languages/xml'
 import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js'
 import { pageApi } from '../../api/page.js'
 import CodeBlock from './editor/CodeBlock.js'
+import Admonition from './editor/Admonition.js'
 import EditorToolbar from './editor/EditorToolbar.vue'
 import EditorToc from './editor/EditorToc.vue'
 import LinkSelection from './editor/LinkSelection.js'
+import 'katex/dist/katex.min.css'
 import '../../assets/styles/editor.css'
 
 const props = defineProps({
@@ -64,6 +67,7 @@ lowlight.registerAlias('xml', ['html'])
 lowlight.highlightAuto = (value) => lowlight.highlight('text', value)
 
 const editor = shallowRef(null)
+const editorToolbar = ref(null)
 const scrollContainer = ref(null)
 const page = ref(null)
 const loading = ref(false)
@@ -341,6 +345,17 @@ function handleEditorLinkClick(view, _position, event) {
   return true
 }
 
+function openMathEditor(kind, node, position) {
+  const dom = editor.value?.view.nodeDOM(position)
+  const rect = dom instanceof Element ? dom.getBoundingClientRect() : null
+  editorToolbar.value?.openMathEditor({
+    kind,
+    latex: node.attrs.latex ?? '',
+    position,
+    rect,
+  })
+}
+
 function focusEditorEnd() {
   const currentEditor = editor.value
   if (!currentEditor?.isEditable || loading.value || loadError.value) {
@@ -374,6 +389,18 @@ onMounted(() => {
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
+      Mathematics.configure({
+        inlineOptions: {
+          onClick: (node, position) => openMathEditor('inline', node, position),
+        },
+        blockOptions: {
+          onClick: (node, position) => openMathEditor('block', node, position),
+        },
+        katexOptions: {
+          throwOnError: false,
+        },
+      }),
+      Admonition,
       LinkSelection,
       Placeholder.configure({ placeholder: '开始输入正文…' }),
     ],
@@ -423,7 +450,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section ref="scrollContainer" class="workspace-scroll min-w-0 flex-1 overflow-y-auto bg-white">
-    <div class="mx-auto min-h-full w-full max-w-[1180px] px-14 pb-16 pt-8">
+    <div class="mx-auto min-h-full w-full max-w-[1180px] px-14 pb-16 pt-2">
       <p
         v-if="warning"
         role="status"
@@ -440,38 +467,35 @@ onBeforeUnmount(() => {
       </div>
 
       <template v-else>
-        <div class="flex min-h-14 items-end justify-between gap-6 border-b border-slate-300 px-4 pb-2">
-          <h1 class="min-w-0 truncate text-3xl font-normal text-slate-900">
-            {{ page?.title || (loading ? '正在加载…' : '页面') }}
-          </h1>
-
-          <button
-            v-if="page"
-            type="button"
-            class="mb-1 inline-flex shrink-0 items-center gap-1.5 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
-            :class="saveState === 'error' ? 'cursor-pointer text-red-600 hover:text-red-700' : 'cursor-default text-slate-400'"
-            :disabled="saveState !== 'error'"
-            :title="saveState === 'error' ? `${saveError}，点击重试` : saveLabel"
-            @click="retrySave"
-          >
-            <span
-              aria-hidden="true"
-              class="h-2 w-2 rounded-full"
-              :class="{
-                'bg-emerald-400': saveState === 'saved',
-                'bg-amber-400': saveState === 'pending',
-                'animate-pulse bg-violet-400': saveState === 'saving',
-                'bg-red-500': saveState === 'error',
-              }"
-            />
-            {{ saveLabel }}
-          </button>
-        </div>
-
         <EditorToolbar
+          ref="editorToolbar"
           :editor="editor"
           :disabled="loading || !page || Boolean(loadError)"
-        />
+        >
+          <template #status>
+            <button
+              v-if="page"
+              type="button"
+              class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+              :class="saveState === 'error' ? 'cursor-pointer bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700' : 'cursor-default text-slate-400'"
+              :disabled="saveState !== 'error'"
+              :title="saveState === 'error' ? `${saveError}，点击重试` : saveLabel"
+              @click="retrySave"
+            >
+              <span
+                aria-hidden="true"
+                class="h-2 w-2 rounded-full"
+                :class="{
+                  'bg-emerald-400': saveState === 'saved',
+                  'bg-amber-400': saveState === 'pending',
+                  'animate-pulse bg-violet-400': saveState === 'saving',
+                  'bg-red-500': saveState === 'error',
+                }"
+              />
+              {{ saveLabel }}
+            </button>
+          </template>
+        </EditorToolbar>
 
         <p v-if="loading" role="status" class="px-4 py-6 text-sm text-slate-500">
           正在加载正文…
