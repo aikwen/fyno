@@ -1,13 +1,26 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { Editor, EditorContent } from '@tiptap/vue-3'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Highlight from '@tiptap/extension-highlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import StarterKit from '@tiptap/starter-kit'
+import { createLowlight } from 'lowlight'
+import bash from 'highlight.js/lib/languages/bash'
+import css from 'highlight.js/lib/languages/css'
+import go from 'highlight.js/lib/languages/go'
+import java from 'highlight.js/lib/languages/java'
+import javascript from 'highlight.js/lib/languages/javascript'
+import json from 'highlight.js/lib/languages/json'
+import python from 'highlight.js/lib/languages/python'
+import sql from 'highlight.js/lib/languages/sql'
+import typescript from 'highlight.js/lib/languages/typescript'
+import xml from 'highlight.js/lib/languages/xml'
 import { pageApi } from '../../api/page.js'
 import EditorToolbar from './editor/EditorToolbar.vue'
+import EditorToc from './editor/EditorToc.vue'
 import '../../assets/styles/editor.css'
 
 const props = defineProps({
@@ -22,20 +35,41 @@ const props = defineProps({
 })
 
 const SAVE_DELAY = 1500
+const TOC_MIN_WIDTH = 1024
 const EMPTY_DOCUMENT = { type: 'doc', content: [{ type: 'paragraph' }] }
+const lowlight = createLowlight({
+  bash,
+  css,
+  go,
+  java,
+  javascript,
+  json,
+  python,
+  sql,
+  typescript,
+  xml,
+})
+
+lowlight.registerAlias('bash', ['sh', 'shell'])
+lowlight.registerAlias('javascript', ['js', 'jsx'])
+lowlight.registerAlias('typescript', ['ts', 'tsx'])
+lowlight.registerAlias('xml', ['html'])
 
 const editor = shallowRef(null)
+const scrollContainer = ref(null)
 const page = ref(null)
 const loading = ref(false)
 const loadError = ref('')
 const saveState = ref('saved')
 const saveError = ref('')
+const showToc = ref(false)
 const sessions = new Map()
 
 let activeSession = null
 let loadRequest = 0
 let applyingContent = false
 let stopped = false
+let layoutObserver = null
 
 const saveLabel = computed(() => ({
   saved: '已保存',
@@ -270,13 +304,15 @@ onMounted(() => {
   editor.value = new Editor({
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
+        codeBlock: false,
+        heading: { levels: [1, 2, 3, 4, 5] },
         link: {
           openOnClick: false,
           autolink: true,
           linkOnPaste: true,
         },
       }),
+      CodeBlockLowlight.configure({ lowlight }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight,
@@ -292,6 +328,11 @@ onMounted(() => {
     },
     onUpdate: handleEditorUpdate,
   })
+
+  layoutObserver = new ResizeObserver(([entry]) => {
+    showToc.value = entry.contentRect.width >= TOC_MIN_WIDTH
+  })
+  layoutObserver.observe(scrollContainer.value)
 
   void loadPage(props.selectedPageID)
 })
@@ -312,6 +353,7 @@ onBeforeUnmount(() => {
     clearTimeout(session.timer)
     session.timer = null
   }
+  layoutObserver?.disconnect()
   void flushSession(activeSession)
   activeSession = null
   editor.value?.destroy()
@@ -320,8 +362,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="workspace-scroll min-w-0 flex-1 overflow-y-auto bg-white">
-    <div class="mx-auto min-h-full w-full max-w-4xl px-14 pb-16 pt-8">
+  <section ref="scrollContainer" class="workspace-scroll min-w-0 flex-1 overflow-y-auto bg-white">
+    <div class="mx-auto min-h-full w-full max-w-[1180px] px-14 pb-16 pt-8">
       <p
         v-if="warning"
         role="status"
@@ -377,11 +419,22 @@ onBeforeUnmount(() => {
         <div v-else-if="loadError" role="alert" class="mx-4 mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {{ loadError }}
         </div>
-        <div v-else-if="page" class="px-4 pt-6">
-          <p v-if="saveState === 'error'" role="alert" class="mb-3 text-xs text-red-600">
-            {{ saveError }}；正文仍保留在当前编辑器中，可继续编辑或点击右上角重试。
-          </p>
-          <EditorContent :editor="editor" />
+        <div v-else-if="page" class="flex items-start gap-8 pt-6">
+          <div class="min-w-0 flex-1 px-4">
+            <p v-if="saveState === 'error'" role="alert" class="mb-3 text-xs text-red-600">
+              {{ saveError }}；正文仍保留在当前编辑器中，可继续编辑或点击右上角重试。
+            </p>
+            <EditorContent :editor="editor" />
+            <div
+              aria-hidden="true"
+              class="h-[calc(100vh-9rem)] min-h-96"
+            />
+          </div>
+          <EditorToc
+            v-if="showToc"
+            :editor="editor"
+            :scroll-container="scrollContainer"
+          />
         </div>
       </template>
     </div>
