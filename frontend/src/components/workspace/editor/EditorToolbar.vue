@@ -17,7 +17,6 @@ import codeIcon from '../../../assets/icon/editor/code.svg'
 import underlineIcon from '../../../assets/icon/editor/underline.svg'
 import highlightIcon from '../../../assets/icon/editor/highlighter.svg'
 import linkIcon from '../../../assets/icon/editor/link.svg'
-import deleteIcon from '../../../assets/icon/delete.svg'
 import { clearLinkSelection, showLinkSelection } from './LinkSelection.js'
 
 const props = defineProps({
@@ -315,37 +314,26 @@ function normalizeLink(value) {
   return value.trim()
 }
 
-function applyLinkDraft() {
+function applyLink() {
   if (toolbarDisabled.value) {
     return
   }
 
   const href = normalizeLink(linkDraft.value)
-  if (!href) {
-    linkError.value = ''
-    return
-  }
-
   if (href && props.editor.state.selection.empty && !isActive('link')) {
     linkError.value = '请先选择要添加链接的文字'
     return
   }
 
-  const chain = props.editor.chain()
-  if (isActive('link')) {
-    chain.extendMarkRange('link')
+  const chain = props.editor.chain().focus()
+  if (!href) {
+    chain.extendMarkRange('link').unsetLink().run()
+  } else {
+    if (isActive('link')) {
+      chain.extendMarkRange('link')
+    }
+    chain.setLink({ href }).run()
   }
-  chain.setLink({ href }).run()
-  linkError.value = ''
-}
-
-function removeLink() {
-  if (toolbarDisabled.value) {
-    return
-  }
-
-  props.editor.chain().focus().extendMarkRange('link').unsetLink().run()
-  linkDraft.value = ''
   linkMenuOpen.value = false
   linkError.value = ''
 }
@@ -565,21 +553,20 @@ onBeforeUnmount(() => {
           v-model="linkDraft"
           type="text"
           class="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-          placeholder="输入链接，编辑后自动应用"
+          placeholder="输入链接；清空后应用可移除"
           aria-label="链接地址"
-          @input="applyLinkDraft"
-          @keydown.enter.prevent="linkMenuOpen = false"
+          @keydown.enter.prevent="applyLink"
           @keydown.escape.prevent="linkMenuOpen = false"
         >
         <button
           type="button"
-          class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
-          title="删除链接"
-          aria-label="删除链接"
+          class="h-9 shrink-0 cursor-pointer rounded-lg bg-violet-600 px-3 text-xs text-white transition-colors hover:bg-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+          title="应用链接"
+          aria-label="应用链接"
           @mousedown.prevent
-          @click="removeLink"
+          @click="applyLink"
         >
-          <Icon :src="deleteIcon" class="h-4 w-4" />
+          应用
         </button>
       </div>
       <p v-if="linkError" class="mt-1.5 px-0.5 text-xs text-red-600">
