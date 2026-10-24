@@ -40,6 +40,10 @@ body {
   background: transparent;
 }
 
+.workspace-scroll::-webkit-scrollbar-button {
+  display: none;
+}
+
 .workspace-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: transparent;
@@ -47,4 +51,8 @@ body {
 
 .workspace-scroll:hover::-webkit-scrollbar-thumb {
   background: #aeb7c2;
+}
+
+.workspace-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

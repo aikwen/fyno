@@ -1,0 +1,188 @@
+.fyno-page-content {
+  min-height: 55vh;
+  color: #334155;
+  font-size: 16px;
+  line-height: 1.78;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.fyno-page-content > *:first-child {
+  margin-top: 0;
+}
+
+.fyno-page-content p {
+  margin: 0 0 0.9em;
+}
+
+.fyno-page-content h1,
+.fyno-page-content h2,
+.fyno-page-content h3 {
+  color: #0f172a;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.fyno-page-content h1 {
+  margin: 1.4em 0 0.55em;
+  font-size: 1.9rem;
+  letter-spacing: -0.025em;
+}
+
+.fyno-page-content h2 {
+  margin: 1.3em 0 0.5em;
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.fyno-page-content h3 {
+  margin: 1.2em 0 0.45em;
+  font-size: 1.22rem;
+}
+
+.fyno-page-content ul:not([data-type='taskList']),
+.fyno-page-content ol {
+  margin: 0.8em 0;
+  padding-left: 1.75em;
+}
+
+.fyno-page-content ul:not([data-type='taskList']) {
+  list-style: disc;
+}
+
+.fyno-page-content ol {
+  list-style: decimal;
+}
+
+.fyno-page-content li {
+  margin: 0.2em 0;
+}
+
+.fyno-page-content li > p {
+  margin: 0;
+}
+
+.fyno-page-content ul[data-type='taskList'] {
+  margin: 0.85em 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fyno-page-content ul[data-type='taskList'] li[data-type='taskItem'] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.35em 0;
+}
+
+.fyno-page-content ul[data-type='taskList'] li[data-type='taskItem'] > label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding-top: 0.3rem;
+  user-select: none;
+}
+
+.fyno-page-content ul[data-type='taskList'] input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  border-radius: 0.25rem;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+
+.fyno-page-content ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.fyno-page-content blockquote {
+  margin: 1em 0;
+  border-left: 3px solid #a78bfa;
+  padding: 0.1em 0 0.1em 1em;
+  color: #64748b;
+}
+
+.fyno-page-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.fyno-page-content pre {
+  margin: 1em 0;
+  overflow-x: auto;
+  border-radius: 0.7rem;
+  background: #1e293b;
+  padding: 0.95rem 1.05rem;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.fyno-page-content :not(pre) > code {
+  border-radius: 0.3rem;
+  background: #f1f5f9;
+  padding: 0.12em 0.34em;
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.fyno-page-content pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.fyno-page-content strong {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.fyno-page-content em {
+  font-style: italic;
+}
+
+.fyno-page-content s {
+  color: #64748b;
+}
+
+.fyno-page-content u {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.fyno-page-content mark {
+  border-radius: 0.2em;
+  background: #fef3c7;
+  padding: 0.04em 0.12em;
+  color: inherit;
+}
+
+.fyno-page-content a {
+  color: #7c3aed;
+  text-decoration: underline;
+  text-decoration-color: #c4b5fd;
+  text-underline-offset: 0.16em;
+  cursor: pointer;
+}
+
+.fyno-page-content a:hover {
+  color: #6d28d9;
+  text-decoration-color: #8b5cf6;
+}
+
+.fyno-page-content p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: #94a3b8;
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.fyno-page-content ::selection {
+  background: #ddd6fe;
+}
