@@ -233,8 +233,12 @@ defineExpose({ openInsert, openEdit, close })
         class="block w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm leading-5 text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
         placeholder="例如：E = mc^2"
         spellcheck="false"
-        @keydown.enter.exact.prevent="applyFormula"
+        @keydown.ctrl.enter.prevent="applyFormula"
       />
+
+      <p class="mt-1 text-right text-[11px] text-slate-400">
+        Ctrl + Enter 应用 · Esc 取消
+      </p>
 
       <div class="mt-2 min-h-12 overflow-x-auto rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-center text-slate-800">
         <span v-if="!latex.trim()" class="text-xs text-slate-400">公式预览</span>

@@ -578,10 +578,10 @@ defineExpose({ openMathEditor })
     ref="root"
     data-editor-toolbar-dock
     class="sticky top-0 z-20 mb-6 w-full bg-white py-3"
+    :class="hasStatus ? 'pr-[5.25rem]' : ''"
   >
     <div
-      class="mx-auto flex w-fit items-center gap-0.5 overflow-hidden rounded-2xl border border-slate-200/75 bg-white/85 p-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.10)] backdrop-blur-xl"
-      :class="hasStatus ? 'max-w-[calc(100%-5.25rem)]' : 'max-w-full'"
+      class="mx-auto flex w-fit max-w-full items-center gap-0.5 overflow-hidden rounded-2xl border border-slate-200/75 bg-white/85 p-1.5 shadow-[0_8px_28px_rgba(15,23,42,0.10)] backdrop-blur-xl"
       role="toolbar"
       aria-label="正文格式工具栏"
     >
